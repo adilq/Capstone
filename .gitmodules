@@ -1,6 +1,7 @@
 [submodule "drone_ws/src/drone_ws/src/px4_msgs"]
 	path = drone_ws/src/drone_ws/src/px4_msgs
 	url = https://github.com/PX4/px4_msgs.git
-[submodule "drone_ws/src/px4_msgs"]
-	path = drone_ws/src/px4_msgs
-	url = https://github.com/PX4/px4_msgs.git
+[submodule "px4_msgs"]
+	path = px4_msgs
+	url = https://github.com/PX4/px4_msgs
+	branch = release/1.15
