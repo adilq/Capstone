@@ -4,15 +4,19 @@ from std_srvs.srv import Empty, Trigger
 
 # Callback handlers
 def handle_launch():
+    # publish to some topic that tells the offb_node to do some predetermined launch sequence
     print('Launch Requested. Your drone should take off.')
 
 def handle_test():
+    # publish to some topic that tells the offb_node to hover in place
     print('Test Requested. Your drone should perform the required tasks. Recording starts now.')
 
 def handle_land():
+    # publish to some topic that tells the offb_node to do some predetermined land sequence
     print('Land Requested. Your drone should land.')
 
 def handle_abort():
+    # publish to some topic that tells the offb_node to kill the motors? land? switch to manual control?
     print('Abort Requested. Your drone should land immediately due to safety considerations')
 
 # Service callbacks
