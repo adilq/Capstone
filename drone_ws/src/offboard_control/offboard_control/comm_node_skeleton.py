@@ -161,15 +161,22 @@ def main(args=None):
             if np.abs(cmd.pose.position.z - node.odom_pose.pose.position.z) < 0.02:
                 cmd.pose.position.z -= 0.1
 
-            if np.abs( - node.odom_pose.pose.position.z) < 0.05:
-                COMMAND = 'ground'
+            if np.abs(0 - node.odom_pose.pose.position.z) < 0.2:
+                offb_set_mode.custom_mode = 'AUTO.LAND'
+                if(node.state.mode != "AUTO.LAND" and (node.get_clock().now() - prev_request) > rclpy.duration.Duration(5.0)):
+                    if(node.set_mode_cli.call(offb_set_mode).mode_sent == True):
+                        node.get_logger.info("Landing mode enabled")
+                    prev_request = node.get_clock().now()
                 continue
         elif COMMAND == 'abort':
-            COMMAND = 'land'
-            continue
-        elif COMMAND == 'ground':
-            offb_set_mode.custom_mode = 'OFFBOARD'
-            arm_cmd.value = True
+            if np.abs(0 - node.odom_pose.pose.position.z) < 0.2:
+                offb_set_mode.custom_mode = 'AUTO.LAND'
+                if(node.state.mode != "AUTO.LAND" and (node.get_clock().now() - prev_request) > rclpy.duration.Duration(5.0)):
+                    if(node.set_mode_cli.call(offb_set_mode).mode_sent == True):
+                        node.get_logger.info("Landing mode enabled")
+                    prev_request = node.get_clock().now()
+                continue
+            
 
     rclpy.shutdown()
 
