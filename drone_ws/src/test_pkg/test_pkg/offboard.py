@@ -24,10 +24,6 @@ class OffboardNode(Node):
         while not self.arm_cli.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('arming service not available')
 
-        # timer
-        # timer_period = 1/20
-        # self.timer = self.create_timer(timer_period, self.timer_callback)
-        # self.i = 0
         self.rate = self.create_rate(1, clock=self.get_clock())
 
         self.prev_request = self.get_clock().now()
@@ -39,24 +35,7 @@ class OffboardNode(Node):
     def state_callback(self, msg):
         self.state = msg
 
-        self.get_logger().info(f"Received: {msg}")
-
-    # def timer_callback(self):
-    #     self.get_logger().info("hi")
-    #     if self.get_clock().now() - self.prev_request > Duration(seconds=5.0):
-    #         self.get_logger().debug(f"current mode: {self.state.mode}")
-    #         if not self.state.armed:
-    #             self.get_logger().debug("attempting to arm")
-    #             if self.arm_cli.call(self.arm_cmd).success:
-    #                 self.get_logger.info("Vehicle armed")
-    #         elif self.state.mode != "OFFBOARD":
-    #             self.get_logger().debug("attempting to offboard")
-    #             if self.set_mode_cli.call(self.offb_set_mode).mode_sent:
-    #                 self.get_logger.info("OFFBOARD enabled")                
-
-    #         self.prev_request = self.get_clock().now()
-
-    #     self.i += 1
+        self.get_logger().debug(f"Received: {msg}")
 
 def main(args=None):
     rclpy.init(args=args)
@@ -66,23 +45,20 @@ def main(args=None):
     thread.start()
 
     while rclpy.ok():
-        node.get_logger().info("hi")
         if node.get_clock().now() - node.prev_request > Duration(seconds=5.0):
             node.get_logger().debug(f"current mode: {node.state.mode}")
             if not node.state.armed:
                 node.get_logger().debug("attempting to arm")
                 if node.arm_cli.call(node.arm_cmd).success:
-                    node.get_logger.info("Vehicle armed")
+                    node.get_logger().info("Vehicle armed")
             elif node.state.mode != "OFFBOARD":
                 node.get_logger().debug("attempting to offboard")
                 if node.set_mode_cli.call(node.offb_set_mode).mode_sent:
-                    node.get_logger.info("OFFBOARD enabled")                
+                    node.get_logger().info("OFFBOARD enabled")                
 
-        node.prev_request = node.get_clock().now()
+            node.prev_request = node.get_clock().now()
 
-        node.get_logger().info("2")
         node.rate.sleep()
-        node.get_logger().info("3")
 
 
     node.destroy_node()
