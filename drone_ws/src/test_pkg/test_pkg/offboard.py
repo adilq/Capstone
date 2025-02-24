@@ -5,6 +5,8 @@ import rclpy.time
 from mavros_msgs.msg import State
 from mavros_msgs.srv import SetMode, CommandBool
 
+import threading
+
 class OffboardNode(Node):
     def __init__(self):
         super().__init__('offboard_node')
@@ -26,7 +28,7 @@ class OffboardNode(Node):
         # timer_period = 1/20
         # self.timer = self.create_timer(timer_period, self.timer_callback)
         # self.i = 0
-        self.rate = self.create_rate(20, clock=self.get_clock())
+        self.rate = self.create_rate(1, clock=self.get_clock())
 
         self.prev_request = self.get_clock().now()
         self.offb_set_mode = SetMode.Request()
@@ -60,6 +62,9 @@ def main(args=None):
     rclpy.init(args=args)
     node = OffboardNode()
 
+    thread = threading.Thread(target=rclpy.spin, args=(node, ), daemon=True)
+    thread.start()
+
     while rclpy.ok():
         node.get_logger().info("hi")
         if node.get_clock().now() - node.prev_request > Duration(seconds=5.0):
@@ -79,10 +84,10 @@ def main(args=None):
         node.rate.sleep()
         node.get_logger().info("3")
 
-    # rclpy.spin(node)
 
     node.destroy_node()
     rclpy.shutdown()
+    thread.join()
 
 if __name__ == '__main__':
     main()
