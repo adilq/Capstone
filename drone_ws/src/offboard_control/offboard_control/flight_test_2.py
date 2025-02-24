@@ -2,17 +2,21 @@ import rclpy
 from rclpy.duration import Duration
 from rclpy.node import Node
 import rclpy.time
-from std_srvs.srv import Empty, Trigger
+from std_srvs.srv import Trigger
 from mavros_msgs.msg import State
 from mavros_msgs.srv import SetMode, CommandBool
 from geometry_msgs.msg import PoseStamped, Pose
-from nav_msgs.msg import Odometry
 import numpy as np
 import threading
 
+GROUND = 'GROUND'
+CONNECT = 'CONNECT'
+TAKEOFF = 'TAKEOFF'
+HOVER = 'HOVER'
+LAND = 'LAND'
+
 COMMAND = 'ground'
-MODE = 'ground'
-goal_pos = Pose()
+MODE = GROUND
 
 # Callback handlers
 def handle_launch():
@@ -60,6 +64,7 @@ def callback_abort(request, response):
     response.success = True
     return response
 
+
 class CommNode(Node):
     def __init__(self):
         super().__init__('rob498_drone_08')
@@ -89,120 +94,107 @@ class CommNode(Node):
 
         # odom: in map frame
         self.odom_sub = self.create_subscription(PoseStamped, 'mavros/local_position/pose', callback = self.odom_callback, qos_profile=10)
-        self.odom_pose = PoseStamped()
+        # self.odom_pose = PoseStamped()
+        self.odom_pose = None   # init to None to check in main()
 
     # state callback
     def state_callback(self, msg):
         self.state = msg
+        self.get_logger().debug(f"Received {msg}")
 
     # odom callback
     def odom_callback(self, msg):
         self.odom_pose = msg
-    
+        self.get_logger().debug(f"Received {msg}")
 
 def main(args=None):
-    global COMMAND, MODE
-    
+    global COMMAND, MODE 
+
+    # node init
     rclpy.init(args=args)
     node = CommNode()
 
     thread = threading.Thread(target=rclpy.spin, args=(node, ), daemon=True)
     thread.start()
 
+    # hover goal
+    goal_pos = PoseStamped()
+    # wait for odom message
+    while rclpy.ok() and not node.odom_pose:
+        node.rate.sleep()
     goal_pos.position = node.odom_pose.pose.position
     goal_pos.position.z = 1.5
+    node.get_logger.info("Initial pose received. Goal position set.")
 
-    # publish poses so we can switch to offboard later
+    # publish poses for offboard
     cmd = PoseStamped()
     cmd.pose.position = node.odom_pose.pose.position
+    cmd.header.frame_id = "map"
     cmd.header.stamp = node.get_clock().now().to_msg()
-    cmd.header.frame_id = 'map'
-    
 
     # wait to connect
     while rclpy.ok() and not node.state.connected:
         node.rate.sleep()
+    node.get_logger.info("Node connected.")
 
-    for i in range(100):   
-        if(not rclpy.ok()):
-            break
-        node.pose_pub.publish(cmd)
-        node.rate.sleep()
-
-    prev_request = node.get_clock().now()
+    # for arm and offboard
     offb_set_mode = SetMode.Request()
-    arm_cmd = CommandBool.Request()
+    offb_set_mode.custom_mode = "OFFBOARD"
+    arm_cmd = CommandBool.request()
+    arm_cmd.value = True 
 
-    node.get_logger().info("starting loop")
+    # logic variables
+    prev_request = node.get_clock().now()
+    counter = 0
+    counter_total = 100
+    
+    node.get_logger().info("Starting loop.")
 
     while rclpy.ok():
-        node.rate.sleep()
-        # node.get_logger().info("node alive")
-
-        # check flags
-        if COMMAND == 'launch':
-            node.get_logger().info("launching")
-            # Set mode to offboard, arm
-            offb_set_mode.custom_mode = 'OFFBOARD'
-            arm_cmd.value = True
-            if(node.state.mode != "OFFBOARD" and (node.get_clock().now() - prev_request) > Duration(seconds=5.0)):
-                if(node.set_mode_cli.call(offb_set_mode).mode_sent == True):
-                    node.get_logger().info("OFFBOARD enabled")
-            
-                prev_request = node.get_clock().now()
-            else:
-                if(not node.state.armed and (node.get_clock().now() - prev_request) > Duration(seconds=5.0)):
-                    if(node.arm_cli.call(arm_cmd).success == True):
-                        node.get_logger().info("Vehicle armed")
-                
-                prev_request = node.get_clock().now()
-
-            if np.abs(cmd.pose.position.z - node.odom_pose.pose.position.z) < 0.02:
-                cmd.pose.position.z += 0.1
-
-            node.get_logger().info(f"goal_pos z: {goal_pos.position.z}")
-            node.get_logger().info(f"current z: {node.odom_pose.pose.position.z}")
-            
-            if np.abs(goal_pos.position.z - node.odom_pose.pose.position.z) < 0.05:
-                COMMAND = 'hover'
-                continue
-
-            cmd.header.stamp = node.get_clock().now().to_msg()
-            node.pose_pub.publish(cmd)
-        elif COMMAND == 'hover':
-            node.get_logger().info("hovering")
-            cmd.pose = goal_pos
-            cmd.header.stamp = node.get_clock().now().to_msg()
-            node.pose_pub.publish(cmd)
+        # state machine
+        if COMMAND == 'abort':
+            MODE = LAND
+        elif COMMAND == 'launch' and MODE == GROUND:
+            MODE = CONNECT
         elif COMMAND == 'test':
-            node.get_logger().info("testing")
-            COMMAND = 'hover'
-            continue
+            MODE = HOVER
         elif COMMAND == 'land':
-            node.get_logger().info("landing")
-            if np.abs(cmd.pose.position.z - node.odom_pose.pose.position.z) < 0.02:
-                cmd.pose.position.z -= 0.1
+            MODE = LAND
 
-            if np.abs(0 - node.odom_pose.pose.position.z) < 0.2:
-                offb_set_mode.custom_mode = 'AUTO.LAND'
-                if(node.state.mode != "AUTO.LAND" and (node.get_clock().now() - prev_request) > Duration(seconds=5.0)):
-                    if(node.set_mode_cli.call(offb_set_mode).mode_sent == True):
-                        node.get_logger().info("Landing mode enabled")
-                    prev_request = node.get_clock().now()
-                continue
-        elif COMMAND == 'abort':
-            node.get_logger().info("aborting")
-            if np.abs(0 - node.odom_pose.pose.position.z) < 0.2:
-                offb_set_mode.custom_mode = 'AUTO.LAND'
-                if(node.state.mode != "AUTO.LAND" and (node.get_clock().now() - prev_request) > Duration(seconds=5.0)):
-                    if(node.set_mode_cli.call(offb_set_mode).mode_sent == True):
-                        node.get_logger().info("Landing mode enabled")
-                    prev_request = node.get_clock().now()
-                continue
-            
+        # behaviour
+        node.get_logger().debug(f"Mode: {MODE}")
+        if MODE == CONNECT:
+            # check if armed and in offboard mode
+
+
+            # publish to setpoint_local until counter == counter_total
+
+            # arm and set mode
+
+            # once set, initialize positions and proceed to TAKEOFF mode
+            pass
+        elif MODE == TAKEOFF:
+            # check distance from goal
+            # if far, check distance from local goal
+            # update local goal as needed in increments to ascend
+            # if close to goal, proceed to HOVER mode
+            pass
+        elif MODE == HOVER:
+            # nothing?
+            pass 
+        elif MODE == LAND:
+            # initiate auto land
+            pass 
+        elif MODE == GROUND:
+            # nothing?
+            pass
+
+        # publish setpoint
+        node.pose_pub.publish(cmd)
+        node.rate.sleep()
 
     rclpy.shutdown()
     thread.join()
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
