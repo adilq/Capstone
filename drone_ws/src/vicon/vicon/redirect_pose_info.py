@@ -10,7 +10,9 @@ class Redirector(Node):
 		self.subscriber_
 
 	def pose_callback(self, msg):
-		self.publisher_.publish(msg)
+		out_msg = msg
+		out_msg.header.frame_id = 'map'
+		self.publisher_.publish(out_msg)
 	
 def main(args=None):
 	rclpy.init(args=args)
