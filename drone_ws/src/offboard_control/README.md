@@ -19,7 +19,7 @@ set `GOAL_HEIGHT` in `flight_test_2.py` to desired goal height
 
 1. run PX4 simulation: `make px4_sitl gazebo-classic` in `PX4-Autopilot`
 
-2. run `mavros`: `ros2 launch px4_autonomy_modules mavros.launch.py`
+2. run `mavros`: `ros2 launch px4_autonomy_modules mavros.launch.py fcu_url:=udp://:14540@127.0.0.1:14557`
 
 3. run node for flight exercise 2: `ros2 run offboard_control flight2`
 
