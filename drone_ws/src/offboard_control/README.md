@@ -13,6 +13,8 @@ modes:
     
 > tip: send `abort` command to re-enable `launch` after landing
 
+set `GOAL_HEIGHT` in `flight_test_2.py` to desired goal height
+
 ## simulation
 
 1. run PX4 simulation: `make px4_sitl gazebo-classic` in `PX4-Autopilot`

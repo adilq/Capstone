@@ -22,6 +22,8 @@ GOAL_TOLERANCE = 0.05
 TAKEOFF_INCREMENT = 0.2     # [m]: how much to increase takeoff goal
 LANDING_INCREMENT = 0.3
 
+GOAL_HEIGHT = 0.5
+
 COMMAND = 'ground'
 MODE = GROUND
 
@@ -132,7 +134,7 @@ def main(args=None):
     while rclpy.ok() and not node.odom_pose:
         node.rate.sleep()
     goal_pos.pose = node.odom_pose.pose
-    goal_pos.pose.position.z = 1.5
+    goal_pos.pose.position.z = GOAL_HEIGHT
     # TODO: set orientation
     node.get_logger().info("Initial pose received. Goal position set.")
 
