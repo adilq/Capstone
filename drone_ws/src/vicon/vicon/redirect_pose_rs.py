@@ -13,6 +13,7 @@ class Redirector_rs(Node):
 	def pose_callback(self, msg):
 		out_msg = PoseStamped()
 		out_msg.header.frame_id = 'map'
+		out_msg.header.stamp = self.get_clock().now().to_msg()
 		out_msg.pose = msg.pose.pose
 		self.publisher_.publish(out_msg)
 	
