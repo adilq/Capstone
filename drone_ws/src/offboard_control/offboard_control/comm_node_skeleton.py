@@ -94,10 +94,12 @@ class CommNode(Node):
     # state callback
     def state_callback(self, msg):
         self.state = msg
+        self.get_logger().info(f"recieved: {msg}")
 
     # odom callback
     def odom_callback(self, msg):
         self.odom_pose = msg
+        self.get_logger().info(f"received: {msg}")
     
 
 def main(args=None):

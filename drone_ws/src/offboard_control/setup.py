@@ -20,7 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'flight2 = offboard_control.comm_node_skeleton:main',
+            'skeleton = offboard_control.comm_node_skeleton:main',
+            'flight2 = offboard_control.flight_test_2:main'
         ],
     },
 )

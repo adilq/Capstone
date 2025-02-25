@@ -21,7 +21,8 @@ setup(
     entry_points={
         'console_scripts': [
             'stationary_pub = test_pkg.stationary_pub:main',
-            'offboard_node = test_pkg.offboard:main'
+            'offboard_node = test_pkg.offboard:main',
+            'odom_sub = test_pkg.odom_sub:main'
         ],
     },
 )

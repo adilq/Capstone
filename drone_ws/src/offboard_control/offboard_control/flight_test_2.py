@@ -2,6 +2,7 @@ import rclpy
 from rclpy.duration import Duration
 from rclpy.node import Node
 import rclpy.time
+import rclpy.qos
 from std_srvs.srv import Trigger
 from mavros_msgs.msg import State
 from mavros_msgs.srv import SetMode, CommandBool
@@ -14,6 +15,12 @@ CONNECT = 'CONNECT'
 TAKEOFF = 'TAKEOFF'
 HOVER = 'HOVER'
 LAND = 'LAND'
+ABORT = 'ABORT'
+
+LOCAL_GOAL_TOLERANCE = 0.10 # [m]: height tolerance of "reached local goal"
+GOAL_TOLERANCE = 0.05
+TAKEOFF_INCREMENT = 0.2     # [m]: how much to increase takeoff goal
+LANDING_INCREMENT = 0.3
 
 COMMAND = 'ground'
 MODE = GROUND
@@ -73,7 +80,7 @@ class CommNode(Node):
         self.srv_land = self.create_service(Trigger, 'rob498_drone_08/comm/land', callback_land)
         self.srv_abort = self.create_service(Trigger, 'rob498_drone_08/comm/abort', callback_abort)
 
-        self.rate = self.create_rate(20)
+        self.rate = self.create_rate(30)
 
         # subscriber for mavros/state
         self.state_sub = self.create_subscription(State, 'mavros/state', callback = self.state_callback, qos_profile=10)
@@ -93,7 +100,7 @@ class CommNode(Node):
         self.pose_pub = self.create_publisher(PoseStamped, 'mavros/setpoint_position/local', 10)
 
         # odom: in map frame
-        self.odom_sub = self.create_subscription(PoseStamped, 'mavros/local_position/pose', callback = self.odom_callback, qos_profile=10)
+        self.odom_sub = self.create_subscription(PoseStamped, 'mavros/local_position/pose', callback = self.odom_callback, qos_profile=rclpy.qos.qos_profile_system_default)
         # self.odom_pose = PoseStamped()
         self.odom_pose = None   # init to None to check in main()
 
@@ -117,14 +124,17 @@ def main(args=None):
     thread = threading.Thread(target=rclpy.spin, args=(node, ), daemon=True)
     thread.start()
 
+    node.get_logger().info("Node online.")
+
     # hover goal
     goal_pos = PoseStamped()
     # wait for odom message
     while rclpy.ok() and not node.odom_pose:
         node.rate.sleep()
-    goal_pos.position = node.odom_pose.pose.position
-    goal_pos.position.z = 1.5
-    node.get_logger.info("Initial pose received. Goal position set.")
+    goal_pos.pose = node.odom_pose.pose
+    goal_pos.pose.position.z = 1.5
+    # TODO: set orientation
+    node.get_logger().info("Initial pose received. Goal position set.")
 
     # publish poses for offboard
     cmd = PoseStamped()
@@ -135,12 +145,12 @@ def main(args=None):
     # wait to connect
     while rclpy.ok() and not node.state.connected:
         node.rate.sleep()
-    node.get_logger.info("Node connected.")
+    node.get_logger().info("Node connected.")
 
     # for arm and offboard
     offb_set_mode = SetMode.Request()
     offb_set_mode.custom_mode = "OFFBOARD"
-    arm_cmd = CommandBool.request()
+    arm_cmd = CommandBool.Request()
     arm_cmd.value = True 
 
     # logic variables
@@ -152,44 +162,103 @@ def main(args=None):
 
     while rclpy.ok():
         # state machine
-        if COMMAND == 'abort':
-            MODE = LAND
+        if COMMAND == 'abort' and MODE != GROUND:
+            MODE = ABORT
         elif COMMAND == 'launch' and MODE == GROUND:
             MODE = CONNECT
         elif COMMAND == 'test':
             MODE = HOVER
-        elif COMMAND == 'land':
+        elif COMMAND == 'land' and MODE != GROUND:
             MODE = LAND
 
         # behaviour
-        node.get_logger().debug(f"Mode: {MODE}")
+        node.get_logger().info(f"Mode: {MODE}")
         if MODE == CONNECT:
             # check if armed and in offboard mode
-
-
-            # publish to setpoint_local until counter == counter_total
-
-            # arm and set mode
-
-            # once set, initialize positions and proceed to TAKEOFF mode
-            pass
+            if node.state.armed and node.state.mode == "OFFBOARD":
+                # once set, initialize positions and proceed to TAKEOFF mode
+                MODE = TAKEOFF
+            else:
+                if counter >= counter_total and node.get_clock().now() - prev_request > Duration(seconds=5.0):
+                    # arm and set mode (try every 5 seconds)
+                    node.get_logger().debug(f"current mode: {node.state.mode}")
+                    if not node.state.armed:
+                        node.get_logger().debug("attempting to arm")
+                        if node.arm_cli.call(arm_cmd).success:
+                            node.get_logger().info("Vehicle armed")
+                    elif node.state.mode != "OFFBOARD":
+                        node.get_logger().debug("attempting to offboard")
+                        if node.set_mode_cli.call(offb_set_mode).mode_sent:
+                            node.get_logger().info("OFFBOARD enabled")   
+                    prev_request = node.get_clock().now()
+                
+                # publish to setpoint_local until counter == counter_total                
+                counter += 1
+            cmd.pose.position = node.odom_pose.pose.position
+                
         elif MODE == TAKEOFF:
             # check distance from goal
+            node.get_logger().info(f"local goal distance: {np.abs(cmd.pose.position.z - node.odom_pose.pose.position.z)}")
+            if np.abs(goal_pos.pose.position.z - node.odom_pose.pose.position.z) < GOAL_TOLERANCE:
+                # if close to goal, proceed to HOVER mode
+                cmd.pose.position.z = goal_pos.pose.position.z
+                MODE = HOVER
             # if far, check distance from local goal
-            # update local goal as needed in increments to ascend
-            # if close to goal, proceed to HOVER mode
-            pass
+            elif np.abs(cmd.pose.position.z - node.odom_pose.pose.position.z) < LOCAL_GOAL_TOLERANCE:
+                # update local goal as needed in increments to ascend
+                cmd.pose.position.z = min(cmd.pose.position.z + TAKEOFF_INCREMENT, goal_pos.pose.position.z)
+            
         elif MODE == HOVER:
             # nothing?
             pass 
         elif MODE == LAND:
             # initiate auto land
-            pass 
+            # offb_set_mode.custom_mode = "AUTO.LAND"
+            # if node.state.mode != "AUTO.LAND" and node.get_clock().now() - prev_request > Duration(seconds=0.5):
+            #     if node.set_mode_cli.call(offb_set_mode).mode_sent == True:
+            #         node.get_logger().info("Landing mode enabled")
+            #     prev_request = node.get_clock().now()
+
+            # when landing begins, set local setpoint relative to current altitude
+            if cmd.pose.position.z == goal_pos.pose.position.z:
+                cmd.pose.position.z = node.odom_pose.pose.position.z - LANDING_INCREMENT
+
+            # check distance from local goal
+            if np.abs(cmd.pose.position.z - node.odom_pose.pose.position.z) < LOCAL_GOAL_TOLERANCE:
+                # update local goal
+                cmd.pose.position.z -= LANDING_INCREMENT
+            
+            # set to GROUND mode when landed
+            if not node.state.armed and node.get_clock().now() - prev_request > Duration(seconds=5.0):
+                # set mode to AUTO.LOITER
+                offb_set_mode.custom_mode = "AUTO.LOITER"
+                if node.set_mode_cli.call(offb_set_mode).mode_sent == True:
+                    node.get_logger().info("Landed")
+                    MODE = GROUND 
+                prev_request = node.get_clock().now()
+        elif MODE == ABORT:
+            # initiate auto land
+            offb_set_mode.custom_mode = "AUTO.LAND"
+            if node.state.mode != "AUTO.LAND" and node.get_clock().now() - prev_request > Duration(seconds=0.5):
+                if node.set_mode_cli.call(offb_set_mode).mode_sent == True:
+                    node.get_logger().info("Landing mode enabled")
+                prev_request = node.get_clock().now()
+            
+            # set to GROUND mode when landed
+            if node.state.mode == "AUTO.LAND" and not node.state.armed and node.get_clock().now() - prev_request > Duration(seconds=5.0):
+                # set mode to AUTO.LOITER
+                offb_set_mode.custom_mode = "AUTO.LOITER"
+                if node.set_mode_cli.call(offb_set_mode).mode_sent == True:
+                    node.get_logger().info("Landed")
+                    MODE = GROUND 
+                prev_request = node.get_clock().now()
+
         elif MODE == GROUND:
             # nothing?
             pass
 
         # publish setpoint
+        cmd.header.stamp = node.get_clock().now().to_msg()
         node.pose_pub.publish(cmd)
         node.rate.sleep()
 
