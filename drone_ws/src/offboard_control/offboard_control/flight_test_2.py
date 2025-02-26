@@ -17,7 +17,7 @@ HOVER = 'HOVER'
 LAND = 'LAND'
 ABORT = 'ABORT'
 
-LOCAL_GOAL_TOLERANCE = 0.10 # [m]: height tolerance of "reached local goal"
+LOCAL_GOAL_TOLERANCE = 0.15 # [m]: height tolerance of "reached local goal"
 GOAL_TOLERANCE = 0.05
 TAKEOFF_INCREMENT = 0.2     # [m]: how much to increase takeoff goal
 LANDING_INCREMENT = 0.3
