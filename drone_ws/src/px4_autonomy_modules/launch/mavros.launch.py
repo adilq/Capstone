@@ -71,9 +71,6 @@ def generate_launch_description():
                 LaunchConfiguration("pluginlists_yaml"),
                 LaunchConfiguration("config_yaml")
             ],
-            remappings=[
-                ('/mavros/vision_pose/pose', '/vicon/ROB498_Drone/ROB498_Drone'),
-            ],
             
         )
     ])
