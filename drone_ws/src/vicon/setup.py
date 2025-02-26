@@ -19,7 +19,8 @@ setup(
     license='TODO: License declaration',
     tests_require=['pytest'],
     entry_points={
-        'console_scripts': ['redirector = vicon.redirect_pose_info:main'
+        'console_scripts': ['redirector = vicon.redirect_pose_vicon:main', 
+                            'redirector_rs = vicon.redirect_pose_rs:main'
         ],
     },
 )
