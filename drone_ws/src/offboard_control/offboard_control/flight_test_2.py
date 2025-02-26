@@ -181,14 +181,16 @@ def main(args=None):
                 # once set, initialize positions and proceed to TAKEOFF mode
                 MODE = TAKEOFF
             else:
-                if counter >= counter_total and node.get_clock().now() - prev_request > Duration(seconds=5.0):
+                if counter >= counter_total and node.get_clock().now() - prev_request > Duration(seconds=2.0):
                     # arm and set mode (try every 5 seconds)
                     node.get_logger().debug(f"current mode: {node.state.mode}")
                     if not node.state.armed:
+                    # if not node.state.armed and node.state.mode == "OFFBOARD":
                         node.get_logger().debug("attempting to arm")
                         if node.arm_cli.call(arm_cmd).success:
                             node.get_logger().info("Vehicle armed")
-                    elif node.state.mode != "OFFBOARD":
+                    if node.state.armed and node.state.mode != "OFFBOARD":
+                    # if node.state.mode != "OFFBOARD":
                         node.get_logger().debug("attempting to offboard")
                         if node.set_mode_cli.call(offb_set_mode).mode_sent:
                             node.get_logger().info("OFFBOARD enabled")   
@@ -249,7 +251,7 @@ def main(args=None):
             # set to GROUND mode when landed
             if node.state.mode == "AUTO.LAND" and not node.state.armed and node.get_clock().now() - prev_request > Duration(seconds=5.0):
                 # set mode to AUTO.LOITER
-                offb_set_mode.custom_mode = "AUTO.LOITER"
+                offb_set_mode.custom_mode = "STABILIZED"
                 if node.set_mode_cli.call(offb_set_mode).mode_sent == True:
                     node.get_logger().info("Landed")
                     MODE = GROUND 
@@ -257,7 +259,7 @@ def main(args=None):
 
         elif MODE == GROUND:
             # nothing?
-            pass
+            cmd.pose.position = node.odom_pose.pose.position
 
         # publish setpoint
         cmd.header.stamp = node.get_clock().now().to_msg()
