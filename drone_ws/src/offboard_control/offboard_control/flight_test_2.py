@@ -22,7 +22,7 @@ GOAL_TOLERANCE = 0.05
 TAKEOFF_INCREMENT = 0.2     # [m]: how much to increase takeoff goal
 LANDING_INCREMENT = 0.3
 
-GOAL_HEIGHT = 0.5
+GOAL_HEIGHT = 1.5
 
 COMMAND = 'ground'
 MODE = GROUND
@@ -76,11 +76,11 @@ def callback_abort(request, response):
 
 class CommNode(Node):
     def __init__(self):
-        super().__init__('rob498_drone_08')
-        self.srv_launch = self.create_service(Trigger, 'rob498_drone_08/comm/launch', callback_launch)
-        self.srv_test = self.create_service(Trigger, 'rob498_drone_08/comm/test', callback_test)
-        self.srv_land = self.create_service(Trigger, 'rob498_drone_08/comm/land', callback_land)
-        self.srv_abort = self.create_service(Trigger, 'rob498_drone_08/comm/abort', callback_abort)
+        super().__init__('rob498_drone_8')
+        self.srv_launch = self.create_service(Trigger, 'rob498_drone_8/comm/launch', callback_launch)
+        self.srv_test = self.create_service(Trigger, 'rob498_drone_8/comm/test', callback_test)
+        self.srv_land = self.create_service(Trigger, 'rob498_drone_8/comm/land', callback_land)
+        self.srv_abort = self.create_service(Trigger, 'rob498_drone_8/comm/abort', callback_abort)
 
         self.rate = self.create_rate(30)
 
