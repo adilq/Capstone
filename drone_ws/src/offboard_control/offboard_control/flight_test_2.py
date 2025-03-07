@@ -198,7 +198,8 @@ def main(args=None):
                 
                 # publish to setpoint_local until counter == counter_total                
                 counter += 1
-            cmd.pose.position = node.odom_pose.pose.position
+           	#cmd.pose.position = node.odom_pose.pose.position
+            cmd.pose.position = goal_pos.pose.position
                 
         elif MODE == TAKEOFF:
             # check distance from goal
@@ -210,7 +211,8 @@ def main(args=None):
             # if far, check distance from local goal
             elif np.abs(cmd.pose.position.z - node.odom_pose.pose.position.z) < LOCAL_GOAL_TOLERANCE:
                 # update local goal as needed in increments to ascend
-                cmd.pose.position.z = min(cmd.pose.position.z + TAKEOFF_INCREMENT, goal_pos.pose.position.z)
+                #cmd.pose.position.z = min(cmd.pose.position.z + TAKEOFF_INCREMENT, goal_pos.pose.position.z)
+                cmd.pose.position = goal_pos.pose.position
             
         elif MODE == HOVER:
             # nothing?
