@@ -80,19 +80,19 @@ def callback_waypoints(msg):
         return
     print('Waypoints Received')
     WAYPOINTS_RECEIVED = True
-    WAYPOINTS = np.empty((0,3))
+    # WAYPOINTS = np.empty((0,3))
     for pose in msg.poses:
         pos = np.array([pose.position.x, pose.position.y, pose.position.z])
         WAYPOINTS = np.vstack((WAYPOINTS, pos))
 
 class CommNode(Node):
     def __init__(self):
-        super().__init__('rob498_drone_08')
-        self.srv_launch = self.create_service(Trigger, 'rob498_drone_08/comm/launch', callback_launch)
-        self.srv_test = self.create_service(Trigger, 'rob498_drone_08/comm/test', callback_test)
-        self.srv_land = self.create_service(Trigger, 'rob498_drone_08/comm/land', callback_land)
-        self.srv_abort = self.create_service(Trigger, 'rob498_drone_08/comm/abort', callback_abort)
-        self.sub_waypoints = self.create_subscription(PoseArray, 'rob498_drone_08/comm/waypoints', callback_waypoints, 10)
+        super().__init__('rob498_drone_8')
+        self.srv_launch = self.create_service(Trigger, 'rob498_drone_8/comm/launch', callback_launch)
+        self.srv_test = self.create_service(Trigger, 'rob498_drone_8/comm/test', callback_test)
+        self.srv_land = self.create_service(Trigger, 'rob498_drone_8/comm/land', callback_land)
+        self.srv_abort = self.create_service(Trigger, 'rob498_drone_8/comm/abort', callback_abort)
+        self.sub_waypoints = self.create_subscription(PoseArray, 'rob498_drone_8/comm/waypoints', callback_waypoints, 10)
 
         self.rate = self.create_rate(30)
 
@@ -118,12 +118,37 @@ class CommNode(Node):
         # self.odom_pose = PoseStamped()
         self.odom_pose = None   # init to None to check in main()
 
+    # state callback
+    def state_callback(self, msg):
+        self.state = msg
+        self.get_logger().debug(f"Received {msg}")
+
+    # odom callback
+    def odom_callback(self, msg):
+        self.odom_pose = msg
+        self.get_logger().debug(f"Received {msg}")
+        
 def main(args=None):
     global COMMAND, MODE, WAYPOINTS, WAYPOINTS_RECEIVED
 
     rclpy.init(args=args)
     node = CommNode()
     print('This is a dummy drone node to test communication with the ground control')
+    thread = threading.Thread(target=rclpy.spin, args=(node, ), daemon=True)
+    thread.start()
+
+    node.get_logger().info("Node online.")
+
+    # hover goal
+    goal_pos = PoseStamped()
+    # wait for odom message
+    while rclpy.ok() and not node.odom_pose:
+        node.rate.sleep()
+    goal_pos.pose = node.odom_pose.pose
+    goal_pos.pose.position.z = GOAL_HEIGHT
+    
+    # TODO: set orientation
+    node.get_logger().info("Initial pose received. Hover position set.")
 
     # publish poses for offboard
     cmd = PoseStamped()
@@ -146,6 +171,8 @@ def main(args=None):
     prev_request = node.get_clock().now()
     counter = 0
     counter_total = 100
+    waypoint_counter = 0
+    WAYPOINTS = np.array([goal_pos.pose.position.x, goal_pos.pose.position.y, goal_pos.pose.position.z])
     
     node.get_logger().info("Starting loop.")
 
@@ -208,7 +235,39 @@ def main(args=None):
             
         elif MODE == HOVER:
             # nothing?
-            pass 
+            pass
+         
+        elif MODE == NAVIGATE:
+            # check if we are at the goal point
+            goal_pos_pos = goal_pos.pose.position
+            goal_point = np.array([goal_pos_pos.x, goal_pos_pos.y, goal_pos_pos.z])
+            curr_pos_pos = node.odom_pose.pose.position
+            curr_point = np.array([curr_pos_pos.x, curr_pos_pos.y, curr_pos_pos.z])
+            
+            if np.linalg.norm(goal_point - curr_point) < 0.4:
+                node.get_logger().info(f"Reached waypoint {waypoint_counter}")
+                # we are there, set the goal to the next waypoint
+                waypoint_counter += 1
+                # check if we are at the last waypoint
+                if waypoint_counter == WAYPOINTS.shape[0]:
+                    # that was the last waypoint, go back to hover mode
+                    MODE == HOVER
+                    node.get_logger().info(f"Final waypoint reached, switched back to hover mode")
+                else:
+                    # set to the next waypoint
+                    new_goal_point = WAYPOINTS[waypoint_counter, :]
+                    goal_pos.pose.position.x = new_goal_point[0]
+                    goal_pos.pose.position.y = new_goal_point[1]
+                    goal_pos.pose.position.z = new_goal_point[2]
+                    node.get_logger().info(f"Next waypoint scheduled: {new_goal_point}")
+                
+            # make sure we are in the correct state, set command
+            if WAYPOINTS_RECEIVED and node.state.armed and node.state.mode == 'OFFBOARD':
+                cmd.pose.position = goal_pos.pose.position
+            else:
+                # something is wrong, we should abort?
+                MODE = ABORT
+            
         elif MODE == LAND:
             # initiate auto land
             # offb_set_mode.custom_mode = "AUTO.LAND"
@@ -234,6 +293,7 @@ def main(args=None):
                     node.get_logger().info("Landed")
                     MODE = GROUND 
                 prev_request = node.get_clock().now()
+                
         elif MODE == ABORT:
             # initiate auto land
             offb_set_mode.custom_mode = "AUTO.LAND"
