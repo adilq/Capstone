@@ -26,7 +26,7 @@ GOAL_TOLERANCE = 0.05
 TAKEOFF_INCREMENT = 0.2     # [m]: how much to increase takeoff goal
 LANDING_INCREMENT = 0.3
 
-GOAL_HEIGHT = 0.5
+GOAL_HEIGHT = 1.5
 
 WAYPOINTS = None
 WAYPOINTS_RECEIVED = False
