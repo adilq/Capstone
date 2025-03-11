@@ -22,8 +22,7 @@ GOAL_TOLERANCE = 0.05
 TAKEOFF_INCREMENT = 0.2     # [m]: how much to increase takeoff goal
 LANDING_INCREMENT = 0.3
 
-OFFSET = 0.0
-GOAL_HEIGHT = 1.5 + OFFSET
+GOAL_HEIGHT = 0.5
 
 COMMAND = 'ground'
 MODE = GROUND
@@ -77,11 +76,11 @@ def callback_abort(request, response):
 
 class CommNode(Node):
     def __init__(self):
-        super().__init__('rob498_drone_8')
-        self.srv_launch = self.create_service(Trigger, 'rob498_drone_8/comm/launch', callback_launch)
-        self.srv_test = self.create_service(Trigger, 'rob498_drone_8/comm/test', callback_test)
-        self.srv_land = self.create_service(Trigger, 'rob498_drone_8/comm/land', callback_land)
-        self.srv_abort = self.create_service(Trigger, 'rob498_drone_8/comm/abort', callback_abort)
+        super().__init__('rob498_drone_08')
+        self.srv_launch = self.create_service(Trigger, 'rob498_drone_08/comm/launch', callback_launch)
+        self.srv_test = self.create_service(Trigger, 'rob498_drone_08/comm/test', callback_test)
+        self.srv_land = self.create_service(Trigger, 'rob498_drone_08/comm/land', callback_land)
+        self.srv_abort = self.create_service(Trigger, 'rob498_drone_08/comm/abort', callback_abort)
 
         self.rate = self.create_rate(30)
 
@@ -199,7 +198,7 @@ def main(args=None):
                 
                 # publish to setpoint_local until counter == counter_total                
                 counter += 1
-           	#cmd.pose.position = node.odom_pose.pose.position
+            #cmd.pose.position = node.odom_pose.pose.position
             cmd.pose.position = goal_pos.pose.position
                 
         elif MODE == TAKEOFF:
@@ -212,8 +211,7 @@ def main(args=None):
             # if far, check distance from local goal
             elif np.abs(cmd.pose.position.z - node.odom_pose.pose.position.z) < LOCAL_GOAL_TOLERANCE:
                 # update local goal as needed in increments to ascend
-                #cmd.pose.position.z = min(cmd.pose.position.z + TAKEOFF_INCREMENT, goal_pos.pose.position.z)
-                cmd.pose.position = goal_pos.pose.position
+               # cmd.pose.position.z = min(cmd.pose.position.z + TAKEOFF_INCREMENT, goal_pos.pose.position.z)
             
         elif MODE == HOVER:
             # nothing?
