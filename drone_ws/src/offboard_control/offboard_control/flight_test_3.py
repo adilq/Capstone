@@ -20,13 +20,14 @@ ABORT = 'ABORT'
 
 COMMAND = 'ground'
 MODE = GROUND
+COMPLETE = False
 
 LOCAL_GOAL_TOLERANCE = 0.15 # [m]: height tolerance of "reached local goal"
 GOAL_TOLERANCE = 0.05
 TAKEOFF_INCREMENT = 0.2     # [m]: how much to increase takeoff goal
 LANDING_INCREMENT = 0.3
 
-GOAL_HEIGHT = 1.5
+GOAL_HEIGHT = 0.5
 
 WAYPOINTS = None
 WAYPOINTS_RECEIVED = False
@@ -129,7 +130,7 @@ class CommNode(Node):
         self.get_logger().debug(f"Received {msg}")
         
 def main(args=None):
-    global COMMAND, MODE, WAYPOINTS, WAYPOINTS_RECEIVED
+    global COMMAND, MODE, WAYPOINTS, WAYPOINTS_RECEIVED, COMPLETE
 
     rclpy.init(args=args)
     node = CommNode()
@@ -177,7 +178,6 @@ def main(args=None):
     node.get_logger().info("Starting loop.")
 
     while rclpy.ok():
-        rclpy.spin_once(node)
         if WAYPOINTS_RECEIVED:
             print('Waypoints:\n', WAYPOINTS)
 
@@ -187,7 +187,7 @@ def main(args=None):
         elif COMMAND == 'launch' and MODE == GROUND:
             MODE = CONNECT
         elif COMMAND == 'test':
-            if WAYPOINTS_RECEIVED:
+            if WAYPOINTS_RECEIVED and not COMPLETE:
                 MODE = NAVIGATE
             else:
                 MODE = HOVER
@@ -247,14 +247,16 @@ def main(args=None):
             if np.linalg.norm(goal_point - curr_point) < 0.4:
                 node.get_logger().info(f"Reached waypoint {waypoint_counter}")
                 # we are there, set the goal to the next waypoint
-                waypoint_counter += 1
                 # check if we are at the last waypoint
-                if waypoint_counter == WAYPOINTS.shape[0]:
+                print(WAYPOINTS.shape)
+                if waypoint_counter == (WAYPOINTS.shape[0]-1):
                     # that was the last waypoint, go back to hover mode
-                    MODE == HOVER
+                    COMPLETE = True
+                    MODE = HOVER
                     node.get_logger().info(f"Final waypoint reached, switched back to hover mode")
                 else:
                     # set to the next waypoint
+                    waypoint_counter += 1
                     new_goal_point = WAYPOINTS[waypoint_counter, :]
                     goal_pos.pose.position.x = new_goal_point[0]
                     goal_pos.pose.position.y = new_goal_point[1]
@@ -320,9 +322,8 @@ def main(args=None):
         node.pose_pub.publish(cmd)
         node.rate.sleep()
 
-        node.get_clock().sleep_for(rclpy.duration.Duration(seconds=0.2))
-
     rclpy.shutdown()
+    thread.join()
 
 if __name__ == "__main__":
     main()
