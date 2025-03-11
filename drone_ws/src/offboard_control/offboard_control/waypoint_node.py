@@ -3,25 +3,6 @@ from rclpy.node import Node
 from geometry_msgs.msg import PoseArray, Pose, Point
 
 # TO-DO: set up waypoints as a parameter we can modify from the command line
-p1 = Pose()
-p1.pose.position = Point(x=1.8, y=1.9, z=0.8)
-# p1.pose.orientation = Quaternion(x=0., y=0., z=0., w=1.)
-# 1781 1884 893
-
-p2 = Pose()
-p2.pose.position = Point(x=1.8, y=-1.8, z=0.8)
-# p2.pose.orientation = Quaternion(x=0., y=0., z=0., w=1.)
-# 1765 -1778 897
-
-p3 = Pose()
-p3.pose.position = Point(x=-1.8, y=-1.6, z=0.9)
-# p3.pose.orientation = Quaternion(x=0., y=0., z=0., w=1.)
-# -1785 -1607 941
-
-p4 = Pose()
-p4.pose.position = Point(x=-1.7, y=2.0, z=0.9)
-# p4.pose.orientation = Quaternion(x=0., y=0., z=0., w=1.)
-# -1679 1961 931
 
 class WaypointNode(Node):
     def __init__(self):
@@ -30,25 +11,27 @@ class WaypointNode(Node):
         self.timer = self.create_timer(0.5, self.timer_callback)
         self.waypoints = PoseArray()
         p1 = Pose()
-        p1.pose.position.x = 5
-        p1.pose.position.y =5
-        p1.pose.position.z = 5
-        p1.pose.position = Point(x=1.8, y=1.9, z=0.8)
+        # p1.position.x = 5
+        # p1.position.y =5
+        # p1.pose.position.z = 5
+        p1.position = Point(x=1.8, y=1.9, z=0.8)
         # p1.pose.orientation = Quaternion(x=0., y=0., z=0., w=1.)
         # 1781 1884 893
 
         p2 = Pose()
-        p2.pose.position = Point(x=1.8, y=-1.8, z=0.8)
+        p2.position = Point(x=1.8, y=-1.8, z=0.8)
         # p2.pose.orientation = Quaternion(x=0., y=0., z=0., w=1.)
         # 1765 -1778 897
 
         p3 = Pose()
-        p3.pose.position = Point(x=-1.8, y=-1.6, z=0.9)
+        p3.position = Point(x=-1.8, y=-1.6, z=0.9)
         # p3.pose.orientation = Quaternion(x=0., y=0., z=0., w=1.)
         # -1785 -1607 941
 
         p4 = Pose()
-        p4.pose.position = Point(x=-1.7, y=2.0, z=0.9)
+        p4.position = Point(x=-1.7, y=2.0, z=0.9)
+        # p3.pose.orientation = Quaternion(x=0., y=0., z=0., w=1.)
+        # -1679 1961 931
         for pose in [p1, p2, p3, p4]:
             self.waypoints.poses.append(pose)
         
