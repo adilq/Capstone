@@ -12,6 +12,7 @@ class CompressedImagePublisher(Node):
 
     def publish_image(self):
         ret, frame = self.cap.read()
+        self.get_logger().info(f"frame shape: {frame.shape}")
         if not ret:
             self.get_logger().error('Failed to capture image from /dev/video0')
             return
