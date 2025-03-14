@@ -2,6 +2,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import CompressedImage
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 
 class CompressedImageSubscriber(Node):
@@ -26,8 +27,9 @@ class CompressedImageSubscriber(Node):
                 return
 
             # Display the image using OpenCV
-            cv2.imshow('Compressed Image', image)
+            cv2.imwrite('Compressed Image', image)
             cv2.waitKey(1)  # Required for OpenCV to update the window
+            # plt.imshow(image)
         except Exception as e:
             self.get_logger().error(f'Error processing the image: {e}')
 
