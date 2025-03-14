@@ -8,7 +8,7 @@ class CompressedImagePublisher(Node):
         super().__init__('compressed_image_publisher')
         self.publisher = self.create_publisher(CompressedImage, 'image/compressed', 10)
         self.timer = self.create_timer(1, self.publish_image)  # Publish at 1 Hz
-        self.cap = cv2.VideoCapture('/dev/video0')  # Open video device
+        self.cap = cv2.VideoCapture(0)  # Open video device
 
     def publish_image(self):
         ret, frame = self.cap.read()
