@@ -22,6 +22,8 @@ setup(
         'console_scripts': [
             'img_publisher = cv_basics.webcam_pub:main',
             'img_subscriber = cv_basics.webcam_sub:main',
+            'img_sub_compressed = cv_basics.webcam_sub_compressed:main',
+            'img_pub_compressed = cv_basics.webcam_pub_compressed:main',
         ],
     },
 )
