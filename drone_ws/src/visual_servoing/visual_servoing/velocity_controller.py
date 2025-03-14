@@ -30,6 +30,7 @@ class VelocityController(Node):
 
         # publisher
         self.vel_pub = self.create_publisher(Twist, 'mavros/setpoint_velocity/cmd_vel', 10)
+        self.pose_pub = self.create_publisher(PoseStamped, 'mavros/setpoint_position/local', 10)
 
         # odom: in map frame
         self.odom_sub = self.create_subscription(PoseStamped, 'mavros/local_position/pose', callback = self.odom_callback, qos_profile=rclpy.qos.qos_profile_system_default)
@@ -54,7 +55,69 @@ def main(args=None):
     thread = threading.Thread(target=rclpy.spin, args=(node, ), daemon=True)
     thread.start()
 
+    node.get_logger().info("Node online.")
+
+    # wait for odom message
+    while rclpy.ok() and not node.odom_pose:
+        node.rate.sleep()
+
+    # publish poses for offboard
+    cmd = PoseStamped()
+    cmd.pose.position = node.odom_pose.pose.position
+    cmd.header.frame_id = "map"
+    cmd.header.stamp = node.get_clock().now().to_msg()
+
+    vel_cmd = Twist()
+
+    # wait to connect
+    while rclpy.ok() and not node.state.connected:
+        node.rate.sleep()
+    node.get_logger().info("Node connected.")
+
+    # for arm and offboard
+    offb_set_mode = SetMode.Request()
+    offb_set_mode.custom_mode = "OFFBOARD"
+    arm_cmd = CommandBool.Request()
+    arm_cmd.value = True 
+
+    # logic variables
+    prev_request = node.get_clock().now()
+    counter = 0
+    counter_total = 100
+    
+    node.get_logger().info("Starting loop.")
+
     while rclpy.ok():
+        # check if armed and in offboard mode
+        if node.state.armed and node.state.mode == "OFFBOARD":
+            if(node.odom_pose.pose.position.z > 1.0):
+                vel_cmd.linear.z = 0.0
+            else:
+                vel_cmd.linear.z = 0.4
+            print(vel_cmd)
+            node.vel_pub.publish(vel_cmd)
+        else:
+            if counter >= counter_total and node.get_clock().now() - prev_request > Duration(seconds=2.0):
+                # arm and set mode (try every 5 seconds)
+                node.get_logger().debug(f"current mode: {node.state.mode}")
+                if not node.state.armed:
+                # if not node.state.armed and node.state.mode == "OFFBOARD":
+                    node.get_logger().debug("attempting to arm")
+                    if node.arm_cli.call(arm_cmd).success:
+                        node.get_logger().info("Vehicle armed")
+                if node.state.armed and node.state.mode != "OFFBOARD":
+                # if node.state.mode != "OFFBOARD":
+                    node.get_logger().debug("attempting to offboard")
+                    if node.set_mode_cli.call(offb_set_mode).mode_sent:
+                        node.get_logger().info("OFFBOARD enabled")   
+                prev_request = node.get_clock().now()
+            
+            # publish to setpoint_local until counter == counter_total                
+            counter += 1
+
+            # publish setpoint
+            cmd.header.stamp = node.get_clock().now().to_msg()
+            node.pose_pub.publish(cmd)
         node.rate.sleep()
 
     rclpy.shutdown()
