@@ -27,10 +27,10 @@ class CompressedImageSubscriber(Node):
                 return
 
             # Display the image using OpenCV
-            # cv2.imwrite('Compressed Image', image)
-            # cv2.waitKey(1)  # Required for OpenCV to update the window
-            plt.imshow(image)
-            plt.pause(1)
+            cv2.imshow('Compressed Image', image)
+            cv2.waitKey(1)  # Required for OpenCV to update the window
+            # plt.imshow(image)
+            # plt.pause(1)
         except Exception as e:
             self.get_logger().error(f'Error processing the image: {e}')
 
