@@ -29,29 +29,10 @@ class CompressedImagePublisher(Node):
         msg.header.stamp = self.get_clock().now().to_msg()
         msg.format = 'jpeg'
         msg.data = jpeg_data.tobytes()
-        self.image_callback(msg)
 
         # Publish the message
         self.publisher.publish(msg)
         self.get_logger().info('Published compressed image')
-    
-    def image_callback(self, msg):
-        try:
-            # Convert the compressed image data back to an OpenCV format
-            np_arr = np.frombuffer(msg.data, np.uint8)
-            image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-
-            if image is None:
-                self.get_logger().error('Failed to decode compressed image')
-                return
-
-            # Display the image using OpenCV
-            cv2.imshow('Compressed Image', image)
-            cv2.waitKey(1)  # Required for OpenCV to update the window
-            # plt.imshow(image)
-            # plt.pause(1)
-        except Exception as e:
-            self.get_logger().error(f'Error processing the image: {e}')
 
 def main(args=None):
     rclpy.init(args=args)
