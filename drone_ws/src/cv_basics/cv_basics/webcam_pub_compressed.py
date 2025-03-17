@@ -9,13 +9,13 @@ class CompressedImagePublisher(Node):
     def __init__(self):
         super().__init__('compressed_image_publisher')
         self.publisher = self.create_publisher(CompressedImage, 'image/compressed', 10)
-        self.timer = self.create_timer(1, self.publish_image)  # Publish at 1 Hz
+        self.timer = self.create_timer(5, self.publish_image)  # Publish at 5 Hz
         self.cap = cv2.VideoCapture(0)  # Open video device
 
     def publish_image(self):
         ret, frame = self.cap.read()
         plt.imshow(frame)
-        plt.pause(0.1)
+        plt.pause(1)
         self.get_logger().info(f"frame shape: {frame.shape}")
         if not ret:
             self.get_logger().error('Failed to capture image from /dev/video0')
