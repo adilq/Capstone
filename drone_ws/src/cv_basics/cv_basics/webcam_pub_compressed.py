@@ -10,7 +10,7 @@ class CompressedImagePublisher(Node):
         super().__init__('compressed_image_publisher')
         self.publisher = self.create_publisher(CompressedImage, 'image/compressed', 10)
         self.timer = self.create_timer(5, self.publish_image)  # Publish at 5 Hz
-        self.cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)1920, height=(int)1080,format=(string)NV12, framerate=(fraction)30/1 ! nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert !  appsink")  # Open video device
+        self.cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)1280, height=(int)720,format=(string)NV12, framerate=(fraction)30/1 ! nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert !  appsink")  # Open video device
 
     def publish_image(self):
         ret, frame = self.cap.read()
