@@ -15,6 +15,7 @@ class CompressedImagePublisher(Node):
     def publish_image(self):
         ret, frame = self.cap.read()
         plt.imshow(frame)
+        self.get_logger().info("frame captured")
         plt.pause(1)
         self.get_logger().info(f"frame shape: {frame.shape}")
         if not ret:
