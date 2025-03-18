@@ -26,6 +26,7 @@ LOCAL_GOAL_TOLERANCE = 0.15 # [m]: height tolerance of "reached local goal"
 GOAL_TOLERANCE = 0.05
 TAKEOFF_INCREMENT = 0.2     # [m]: how much to increase takeoff goal
 LANDING_INCREMENT = 0.3
+NAV_THRESHOLD = 0.5
 
 GOAL_HEIGHT = 0.5
 
@@ -82,9 +83,22 @@ def callback_waypoints(msg):
     print('Waypoints Received')
     WAYPOINTS_RECEIVED = True
     # WAYPOINTS = np.empty((0,3))
+    
+    goals = WAYPOINTS
+    
     for pose in msg.poses:
         pos = np.array([pose.position.x, pose.position.y, pose.position.z])
-        WAYPOINTS = np.vstack((WAYPOINTS, pos))
+        goals = np.vstack((goals, pos))
+    
+    for i, pos in enumerate(goals[1:]):
+        distance = pos - goals[i-1]
+        length = np.linalg.norm(distance)
+        
+        if length > NAV_THRESHOLD:
+            num_steps = round(length / NAV_THRESHOLD)
+            steps = np.linspace(goals[i], pos, num_steps+1)
+            
+            WAYPOINTS = np.vstack([WAYPOINTS, steps[1:]])
 
 class CommNode(Node):
     def __init__(self):
@@ -265,15 +279,7 @@ def main(args=None):
                 
             # make sure we are in the correct state, set command
             if WAYPOINTS_RECEIVED and node.state.armed and node.state.mode == 'OFFBOARD':
-                error = goal_point - curr_point
-                length = np.linalg.norm(error)
-                if length > 0.5:
-                    unit = error / length
-                    cmd.pose.position.x += unit[0]
-                    cmd.pose.position.y += unit[1]
-                    cmd.pose.position.z += unit[2]
-                else:
-                    cmd.pose.position = goal_pos.pose.position
+                cmd.pose.position = goal_pos.pose.position
 
             else:
                 # something is wrong, we should abort?
