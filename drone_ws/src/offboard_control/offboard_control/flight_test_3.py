@@ -265,7 +265,16 @@ def main(args=None):
                 
             # make sure we are in the correct state, set command
             if WAYPOINTS_RECEIVED and node.state.armed and node.state.mode == 'OFFBOARD':
-                cmd.pose.position = goal_pos.pose.position
+                error = goal_point - curr_point
+                length = np.linalg.norm(error)
+                if length > 0.5:
+                    unit = error / length
+                    cmd.pose.position.x += unit[0]
+                    cmd.pose.position.y += unit[1]
+                    cmd.pose.position.z += unit[2]
+                else:
+                    cmd.pose.position = goal_pos.pose.position
+
             else:
                 # something is wrong, we should abort?
                 MODE = ABORT
