@@ -1,5 +1,6 @@
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 from sensor_msgs.msg import CompressedImage
 import cv2
 import matplotlib.pyplot as plt
@@ -8,11 +9,17 @@ import numpy as np
 class CompressedImageSubscriber(Node):
     def __init__(self):
         super().__init__('compressed_image_subscriber')
+        qos = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+            durability=DurabilityPolicy.VOLATILE,
+            depth=2
+        )
         self.subscription = self.create_subscription(
             CompressedImage,
             'image/compressed',
             self.image_callback,
-            10
+            qos
         )
         self.get_logger().info('Subscribed to image/compressed topic')
 

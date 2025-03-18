@@ -1,6 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import CompressedImage
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,9 +9,15 @@ import matplotlib.pyplot as plt
 class CompressedImagePublisher(Node):
     def __init__(self):
         super().__init__('compressed_image_publisher')
-        self.publisher = self.create_publisher(CompressedImage, 'image/compressed', 10)
-        self.timer = self.create_timer(5, self.publish_image)  # Publish at 5 Hz
-        self.cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)1280, height=(int)720,format=(string)NV12, framerate=(fraction)30/1 ! nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert !  appsink")  # Open video device
+        qos = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+            durability=DurabilityPolicy.VOLATILE,
+            depth=2
+        )
+        self.publisher = self.create_publisher(CompressedImage, 'image/compressed', qos)
+        self.timer = self.create_timer(1, self.publish_image)  # Publish at 1 Hz
+        self.cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)720, height=(int)480,format=(string)NV12, framerate=(fraction)1/1 ! nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert !  appsink")  # Open video device
 
     def publish_image(self):
         ret, frame = self.cap.read()
