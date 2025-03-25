@@ -14,7 +14,7 @@ class Redirector_rs(Node):
         self.get_logger().info("node up")
 
     def pose_callback(self, msg):
-        self.get_logger().info(f"received: {msg}")
+        self.get_logger().info(f"received: {msg.pose.pose}")
         out_msg = PoseStamped()
         out_msg.header.frame_id = 'map'
         out_msg.header.stamp = self.get_clock().now().to_msg()

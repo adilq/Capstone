@@ -57,3 +57,6 @@ CATKIN_IGNORE
 
 # vscode
 .vscode/
+
+# bags
+**/bags/
