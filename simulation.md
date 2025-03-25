@@ -23,11 +23,13 @@
 
 1. source ROS installation
 
-2. run the `box_robot.world` world using the above instructions
+2. add the models folder to `GAZEBO_MODEL_PATH`: `export GAZEBO_MODEL_PATH=PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic/models/`
 
-3. echo the position of the box: `ros2 topic echo /box/joint_states`
+3. run the `box_robot.world` world using the above instructions
 
-4. move the box one unit in the `y`-direction: `ros2 topic pub /box/set_joint_trajectory trajectory_msgs/msg/JointTrajectory  "{header: {frame_id: world}, joint_names: {y_joint}, points: [{positions: {1}}]}"`
+4. echo the position of the box: `ros2 topic echo /box/joint_states`
+
+5. move the box one unit in the `y`-direction: `ros2 topic pub /box/set_joint_trajectory trajectory_msgs/msg/JointTrajectory  "{header: {frame_id: world}, joint_names: {y_joint}, points: [{positions: {1}}]}"`
 
 # run the drone simulation
 
