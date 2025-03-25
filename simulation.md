@@ -1,6 +1,6 @@
-    note: these instructions are for ROS2 foxy with Gazebo Classic
+> note: these instructions are for ROS2 foxy with Gazebo Classic
     
-    note: instructions may be inaccurate 
+> note: instructions may be inaccurate 
 
 # setup
 
@@ -8,8 +8,8 @@
 
 2. update submodules: `git submodule update --init --recursive`
 
-3. unzip any large model files: e.g., `unzip zebra.zip` in `PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic/models/zebra/meshes/'
-    (large files are zipped to push them to github)
+3. unzip any large model files: e.g., `unzip zebra.zip` in `PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic/models/zebra/meshes/`
+> (large files are zipped to push them to github)
 
 # open a gazebo world
 
@@ -40,3 +40,5 @@
 3. run the drone simulation: `make px4_sitl gazebo-classic`
 
 4. launch mavros: `ros2 launch px4_autonomy_modules mavros.launch.py fcu_url:=udp://:14540@127.0.0.1:14557`
+
+5. profit
