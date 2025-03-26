@@ -44,3 +44,11 @@
 4. launch mavros: `ros2 launch px4_autonomy_modules mavros.launch.py fcu_url:=udp://:14540@127.0.0.1:14557`
 
 5. profit
+
+# nodes
+
+world: **moving_box**
+
+* `ros2 run simulation line_path`: box moves from 0 to +10 in the x direction
+
+* `ros2 run simulation loop_path`: box does a big loop in something of a cardioid shape. modify the parameters in `loop_path.py` to adjust size and speed.
