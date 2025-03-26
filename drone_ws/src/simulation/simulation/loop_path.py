@@ -7,7 +7,7 @@ from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 import numpy as np
 import threading
 
-SCALE = 5
+SCALE = 2
 n = 10000
 delta_time = 0.01
 

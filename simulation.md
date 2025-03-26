@@ -54,3 +54,5 @@ world: **moving_box**
 * `ros2 run simulation line_path`: box moves from 0 to +10 in the x direction
 
 * `ros2 run simulation loop_path`: box does a big loop in something of a cardioid shape. modify the parameters in `loop_path.py` to adjust size and speed.
+
+* `ros2 run simulation joint_to_pose`: publish the box's position as a `PoseStamped` message in the `map` frame (global).

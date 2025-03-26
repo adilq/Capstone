@@ -23,7 +23,8 @@ setup(
             'waypoint_publisher = simulation.follow_joint_path:main',
             'simple_waypoints = simulation.simple_path:main',
             'line_path = simulation.line_path:main',
-            'loop_path = simulation.loop_path:main'
+            'loop_path = simulation.loop_path:main',
+            'joint_to_pose = simulation.publish_position:main'
         ],
     },
 )
