@@ -6,9 +6,11 @@
 
 1. switch to `simulation` branch
 
-2. update submodules: `git submodule update --init --recursive`
+2. install gazebo packages: `sudo apt install ros-foxy-gazebo-ros-pkgs`
 
-3. unzip any large model files: e.g., `unzip zebra.zip` in `PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic/models/zebra/meshes/`
+3. update submodules: `git submodule update --init --recursive`
+
+4. unzip any large model files: e.g., `unzip zebra.zip` in `PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic/models/zebra/meshes/`
 > (large files are zipped to push them to github)
 
 # open a gazebo world
