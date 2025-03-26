@@ -20,7 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'velocity_controller = visual_servoing.velocity_controller:main'
+            'controller = visual_servoing.controller:main'
         ],
     },
 )
