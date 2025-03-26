@@ -1,0 +1,14 @@
+joints: ["x_joint", "y_joint", "theta_joint"]
+loop: True
+frame_id: "world"
+rate: 1         # Hz
+
+mode: "constant_speed"
+
+path:           # m
+  - [3, -3, 0]
+  - [3, 3, 0.8]
+  - [-3, 3, 1.8]
+  - [-3, -3, 2.4]
+  - [3, -3, 0]
+speed: [0.5, 0.5, 0.5]       # m/s
