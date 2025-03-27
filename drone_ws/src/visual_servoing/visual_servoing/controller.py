@@ -120,6 +120,7 @@ class Controller(Node):
         self.prev_ev = np.zeros((8,1))
         self.prev_v = np.zeros((4,1))
         self.delta_t = 1 # change to time since last camera message?
+        self.depth = None
 
 
     # state callback
@@ -154,9 +155,9 @@ class Controller(Node):
         sp = np.sin(p)
         cr = np.cos(r)
         sr = np.sin(r)
-        C = np.array[[cy, cy*sp*sr-sy*cr, cy*sp*cr+sy*sr],
+        C = np.array([[cy, cy*sp*sr-sy*cr, cy*sp*cr+sy*sr],
                      [sy*cp, sy*sp*sr+cy*cr, sy*sp*cr-cy*sr],
-                     [-sp, cp*sr, cp*cr]]
+                     [-sp, cp*sr, cp*cr]])
         
         virtual_coords = C@cam_coords
 
@@ -182,7 +183,7 @@ class Controller(Node):
         v: 4x1
         '''
         # velocity control input
-        v = np.zeros((6, 1))
+        v = np.zeros((4, 1))
 
         # number of points
         n = depths.size
@@ -214,6 +215,11 @@ class Controller(Node):
         
         # Compute v
         v = -self.gain * np.dot(J_inv, ev) - np.dot(J_inv, delta_ev)
+
+        # Save values for next iteration
+        self.prev_ev = ev
+        self.prev_v = v
+
         return v
 
 def main(args=None):
@@ -326,7 +332,21 @@ def main(args=None):
             # do visual servoing
             # if we want to stop following (maybe all the animals left the frame), set FOLLOW = False
             # TO-DO: setpoint = current pose + self.delta_t * self.get_velocity_input
-            pass
+            pts_des = np.array([[1, -1], [-1, 1], [-1, -1], [1, 1]]).T
+            pts_obs = np.array([[1, -1], [-1, 1], [-1, -1], [1, 1]]).T
+            depths = np.array([node.depth, node.depth, node.depth, node.depth])
+            velocity = node.get_control_velocity(pts_des, pts_obs, depths)
+            roll, pitch, yaw = tf_transformations.euler_from_quaternion(node.odom_pose.pose.orientation)
+            cur_pose = np.array([node.odom_pose.pose.position.x, 
+                                 node.odom_pose.pose.position.y, 
+                                 node.odom_pose.pose.position.z,
+                                 yaw])
+            setpoint = cur_pose + node.delta_t * velocity
+            cmd.pose.position.x = setpoint[0]
+            cmd.pose.position.y = setpoint[1]
+            cmd.pose.position.z = setpoint[2]
+            # cmd.pose.orientation = setpoint[2] how to give a yaw set point?
+            
         elif MODE == LAND:
             if cmd.pose.position.z == goal_pos.pose.position.z:
                 cmd.pose.position.z = node.odom_pose.pose.position.z - LANDING_INCREMENT
