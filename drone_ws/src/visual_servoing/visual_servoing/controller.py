@@ -36,7 +36,7 @@ GOAL_HEIGHT = 1.5 + OFFSET
 
 COMMAND = 'ground'
 MODE = GROUND
-FOLLOW = False
+FOLLOW = True
 
 # Callback handlers
 def handle_launch():
@@ -115,7 +115,8 @@ class Controller(Node):
         self.odom_pose = None
 
         # controller
-        self.K = np.zeros((3,3)) # maybe set as a parameter or can just hard code?
+        # self.K = np.zeros((3,3)) # maybe set as a parameter or can just hard code?
+        self.K = np.eye(3)
         self.gain = 1 # tune later
         self.prev_ev = np.zeros((8,1))
         self.prev_v = np.zeros((4,1))
@@ -148,7 +149,10 @@ class Controller(Node):
 
         cam_coords = np.array([[X], [Y], [Z]])
 
-        r, p, y = tf_transformations.euler_from_quaternion(self.odom_pose.pose.orientation)
+        odom_quat = self.odom_pose.pose.orientation
+
+        # r, p, y = tf_transformations.euler_from_quaternion(self.odom_pose.pose.orientation)
+        r, p, y = tf_transformations.euler_from_quaternion([odom_quat.x, odom_quat.y, odom_quat.z, odom_quat.w])
         cy = np.cos(y)
         sy = np.sin(y)
         cp = np.cos(p)
@@ -167,7 +171,7 @@ class Controller(Node):
         u_v = X_v/Z_v
         v_v = Y_v/Z_v
 
-        return u_v, v_v, Z_v
+        return u_v.item(), v_v.item(), Z_v.item()
 
     def jacobian(self, u_v, v_v, Z_v):
         '''obs: 2x1 np array'''
@@ -195,9 +199,11 @@ class Controller(Node):
         cy = self.K[1,2]
 
         # Stack Jacobians
+        # self.get_logger().info(f"f: {f}, {type(f)}")
         u = (obs[0, 0] - cx) / f
         v = (obs[1, 0] - cy) / f
         u_v, v_v, Z_v = self.get_virtual_image_coordinates(u, v, depths[0])
+        # self.get_logger().info(f"array shapes: {u_v.shape}, {v_v.shape}, {Z_v.shape}")
         J = self.jacobian(u_v, v_v, Z_v)
         ev = np.array([[u_v],[v_v]]) - des[:, 0]
         for i in range(1, n):
@@ -336,7 +342,9 @@ def main(args=None):
             pts_obs = np.array([[1, -1], [-1, 1], [-1, -1], [1, 1]]).T
             depths = np.array([node.depth, node.depth, node.depth, node.depth])
             velocity = node.get_control_velocity(pts_des, pts_obs, depths)
-            roll, pitch, yaw = tf_transformations.euler_from_quaternion(node.odom_pose.pose.orientation)
+            odom_quat = node.odom_pose.pose.orientation
+            # roll, pitch, yaw = tf_transformations.euler_from_quaternion(node.odom_pose.pose.orientation)
+            roll, pitch, yaw = tf_transformations.euler_from_quaternion([odom_quat.x, odom_quat.y, odom_quat.z, odom_quat.w])
             cur_pose = np.array([node.odom_pose.pose.position.x, 
                                  node.odom_pose.pose.position.y, 
                                  node.odom_pose.pose.position.z,
