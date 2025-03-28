@@ -61,8 +61,10 @@ def main(args=None):
         pose.header.stamp = node.get_clock().now().to_msg()
         pose.header.frame_id = "map"
 
+        # node.get_logger().info(f"publishing message of type {type(pose)}")
         node.pose_pub.publish(pose)
         node.rate.sleep()
+
 
     rclpy.shutdown()
     thread.join()
