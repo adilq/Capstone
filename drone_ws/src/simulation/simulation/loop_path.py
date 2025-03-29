@@ -50,17 +50,20 @@ def main(args=None):
         r = 2 + 4 * np.sin(t)
         return SCALE * (r * np.cos(t))
 
+    def h(t):
+        return np.arctan2(g(t+1)-g(t), f(t+1)-f(t)) + np.pi/4
+
     jt = JointTrajectory()
 
     jt.header.frame_id = "world"
-    jt.joint_names = ["x_joint", "y_joint"]
+    jt.joint_names = ["x_joint", "y_joint", "theta_joint"]
 
     for i in range(n):
         t = i * dt
 
         jtp = JointTrajectoryPoint()
 
-        jtp.positions = [f(t), g(t)]
+        jtp.positions = [f(t), g(t), h(t)]
         jtp.time_from_start = Duration(seconds=delta_time).to_msg()
 
         jt.points.append(jtp)

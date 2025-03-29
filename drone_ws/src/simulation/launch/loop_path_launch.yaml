@@ -1,0 +1,10 @@
+launch:
+  - node:
+      pkg: "simulation"
+      exec: "loop_path"
+      name: "loop_waypoints_pub"
+
+  - node:
+      pkg: "simulation"
+      exec: "joint_to_pose"
+      name: "joint_to_pose_pub"
