@@ -53,7 +53,7 @@
 
 2. select `box_robot` world: `export PX4_SITL_WORLD=box_robot`
 
-3. run drone simulation with downward-facing camera: `make px4_sitl gazebo-classic_iris_downward_depth_camera
+3. run drone simulation with downward-facing camera: `make px4_sitl gazebo-classic_iris_downward_depth_camera`
 
 4. launch mavros
 
