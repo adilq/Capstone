@@ -47,9 +47,29 @@
 
 5. profit
 
+## zebra box
+
+1. source ROS installation and workspace
+
+2. select `box_robot` world: `export PX4_SITL_WORLD=box_robot`
+
+3. run drone simulation with downward-facing camera: `make px4_sitl gazebo-classic_iris_downward_depth_camera
+
+4. launch mavros
+
+5. move box and publish its pose: `ros2 launch simulation loop_path_launch.yaml`
+
+6. visualise in rviz: `rviz2`
+
+relevant topics:
+
+* camera images: `/camera/image_raw`
+* box position: `/box/position/global`
+* drone position: `mavros/local_position/pose`
+
 # nodes
 
-world: **moving_box**
+world: **box_robot**
 
 * `ros2 run simulation line_path`: box moves from 0 to +10 in the x direction
 
