@@ -41,7 +41,7 @@
     * e.g., `export PX4_SITL_WORLD=box_robot` (note no `.world` extension)
     * skip this step to use the default world
 
-3. run the drone simulation: `make px4_sitl gazebo-classic`
+3. run the drone simulation: `make px4_sitl gazebo-classic` in the `PX4-Autopilot` folder
 
 4. launch mavros: `ros2 launch px4_autonomy_modules mavros.launch.py fcu_url:=udp://:14540@127.0.0.1:14557`
 
