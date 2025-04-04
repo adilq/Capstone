@@ -21,7 +21,9 @@ setup(
     entry_points={
         'console_scripts': [
             'skeleton = offboard_control.comm_node_skeleton:main',
-            'flight2 = offboard_control.flight_test_2:main'
+            'flight2 = offboard_control.flight_test_2:main',
+            'flight3 = offboard_control.flight_test_3:main',
+            'waypoints = offboard_control.waypoint_node:main'
         ],
     },
 )
