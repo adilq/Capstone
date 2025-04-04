@@ -45,7 +45,7 @@ class ObjectDetectionNode(Node):
         # capture object to keep streaming data
         self.cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)720, height=(int)480,format=(string)NV12, framerate=(fraction)1/1 ! nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert !  appsink")
 
-    def image_callback(self, msg):
+    def image_callback(self):
         # get a frame
         ret, cv_image = self.cap.read()
         if not ret:
