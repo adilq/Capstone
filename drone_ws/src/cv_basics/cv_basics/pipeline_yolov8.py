@@ -40,7 +40,6 @@ class ObjectDetectionNode(Node):
         
         #MODEL LOAD
         self.model = model = YOLO('best.pt') 
-        # self.model = models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
         self.model.eval()  #EVAL
 
         #SUB/PUB
@@ -62,14 +61,19 @@ class ObjectDetectionNode(Node):
         result = self.model(cv_image)
         #results = model(input_image)
         # boxes = result[0].boxes
-        boxes_xyxy =  torch.Tensor.numpy(result[0].boxes.xyxy)
-        boxes_cls =  torch.Tensor.numpy(result[0].boxes.cls)
-        boxes_conf = torch.Tensor.numpy(result[0].boxes.conf)
-        boxes_id =  torch.Tensor.numpy(result[0].boxes.id)
-        
-        # Displaying the results:
-        print(f"Got {len(boxes)} objects")
-        print(f"BBoxes: {boxes}")     
+        output = BoundingBoxes()
+
+        boxes_xyxy = (result[0].boxes.xyxy)
+        output.x1 = boxes_xyxy[:, 0]
+        output.y1 = boxes_xyxy[:, 1]
+        output.x2 = boxes_xyxy[:, 2]
+        output.y2 = boxes_xyxy[:, 3]
+        output.cls =  (result[0].boxes.cls)
+        output.conf = (result[0].boxes.conf)
+        output.track_id =  (result[0].boxes.id)
+
+        #publish
+        self.bbox_publisher.publish(output)
 
         #FOR TEST: look at the boxes in the image
         # for i, box in enumerate(boxes):
