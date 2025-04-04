@@ -95,7 +95,7 @@ def callback_waypoints(msg):
         length = np.linalg.norm(distance)
         
         if length > NAV_THRESHOLD:
-            num_steps = round(length / NAV_THRESHOLD)
+            num_steps = int(round(length / NAV_THRESHOLD))
             steps = np.linspace(goals[i], pos, num_steps+1)
             
             WAYPOINTS = np.vstack([WAYPOINTS, steps[1:]])

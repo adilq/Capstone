@@ -149,7 +149,7 @@
 ## Currently available orientations:
 #    Check http://wiki.ros.org/mavros/Enumerations
 ##
-/**/distance_sensor:
+/mavros/distance_sensor:
   ros__parameters:
     config: |
       hrlv_ez4_pub:
