@@ -59,10 +59,14 @@ class ObjectDetectionNode(Node):
         transform = transforms.Compose([transforms.ToTensor()])
         input_image = transform(pil_image).unsqueeze(0)
 
-        results = self.model(cv_image)
+        result = self.model(cv_image)
         #results = model(input_image)
-        boxes = results.boxes
-
+        # boxes = result[0].boxes
+        boxes_xyxy =  torch.Tensor.numpy(result[0].boxes.xyxy)
+        boxes_cls =  torch.Tensor.numpy(result[0].boxes.cls)
+        boxes_conf = torch.Tensor.numpy(result[0].boxes.conf)
+        boxes_id =  torch.Tensor.numpy(result[0].boxes.id)
+        
         # Displaying the results:
         print(f"Got {len(boxes)} objects")
         print(f"BBoxes: {boxes}")     
