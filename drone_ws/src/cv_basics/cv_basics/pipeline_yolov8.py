@@ -31,15 +31,12 @@ from ultralytics import YOLO
 
 
 class ObjectDetectionNode(Node):
-    """
-    init bbox publisher node subclass of Node class.
-    """
     def __init__(self):
         super().__init__('object_detection_node') # class constructor+name
         self.bridge = CvBridge()
         
         #MODEL LOAD
-        self.model = model = YOLO('best.pt') 
+        self.model = ('best.pt') 
         self.model.eval()  #EVAL
 
         #SUB/PUB
@@ -60,7 +57,7 @@ class ObjectDetectionNode(Node):
 
         result = self.model(cv_image)
         #results = model(input_image)
-        # boxes = result[0].boxes
+        
         output = BoundingBoxes()
 
         boxes_xyxy = (result[0].boxes.xyxy)
