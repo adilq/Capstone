@@ -17,7 +17,7 @@ AFRIN TODO LIST:
 #ROS
 import rclpy
 from rclpy.node import Node
-from custom_msgs.msg import BoundingBoxes # Import BBox message (custom)
+from custom_messages.msg import BoundingBoxes # Import BBox message (custom)
 #FasteR-CNN
 # from cv_bridge import CvBridge
 import torch
