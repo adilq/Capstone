@@ -17,8 +17,6 @@ AFRIN TODO LIST:
 #ROS
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import Image
-from std_msgs.msg import Header
 from custom_msgs.msg import BoundingBoxes # Import BBox message (custom)
 #FasteR-CNN
 # from cv_bridge import CvBridge
@@ -36,23 +34,27 @@ class ObjectDetectionNode(Node):
     """
     def __init__(self):
         super().__init__('object_detection_node') # class constructor+name
-        self.bridge = CvBridge()
-        
+                
         #MODEL LOAD
         self.model = model = YOLO('best.pt') 
         self.model.eval()  #EVAL
 
-        #SUB/PUB
-        self.subscription = self.create_subscription(Image, '/camera/video_frames', self.image_callback, 10) #pretty sure cam sends me ROSImage RN, but can send .jpg probably
+        #PUB
         self.bbox_publisher = self.create_publisher(BoundingBoxes, '/bbox_out', 10) #topic bbox_out is using BoundingBox.msg type
+        
+        #timer to determine how fast we do the callback
+        self.timer = self.create_timer(1, self.image_callback)
+        
+        # capture object to keep streaming data
+        self.cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)720, height=(int)480,format=(string)NV12, framerate=(fraction)1/1 ! nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert !  appsink")
 
     def image_callback(self, msg):
-        try:
-            cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8") #ROSImage to CV2IMAGE
-        except Exception as e:
-            self.get_logger().error(f"Could not convert image: {e}")
+        # get a frame
+        ret, cv_image = self.cap.read()
+        if not ret:
+            self.get_logger().error('Failed to capture image from /dev/video0')
             return
-        
+
         #Image Preprocess - get PILImage, make tensor
         pil_image = PILImage.fromarray(cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)) #CV2 image to PILImage
         transform = transforms.Compose([transforms.ToTensor()])
