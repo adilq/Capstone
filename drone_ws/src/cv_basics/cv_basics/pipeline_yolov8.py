@@ -33,7 +33,7 @@ class ObjectDetectionNode(Node):
         super().__init__('object_detection_node') # class constructor+name
                 
         #MODEL LOAD
-        self.model = ('best.pt') 
+        self.model = YOLO('best.pt') 
         self.model.eval()  #EVAL
 
         #PUB
