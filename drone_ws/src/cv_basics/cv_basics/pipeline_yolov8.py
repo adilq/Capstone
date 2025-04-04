@@ -61,21 +61,11 @@ class ObjectDetectionNode(Node):
 
         results = self.model(cv_image)
         #results = model(input_image)
-        boxes = results.pred[0].boxes  
-        labels = results.pred[0].cls  
-        scores = results.pred[0].conf
+        boxes = results.boxes
 
         # Displaying the results:
         print(f"Got {len(boxes)} objects")
-        print(f"BBoxes: {boxes}")
-        print(f"Labels: {labels}")
-        print(f"Scores: {scores}")
-
-        # OPTIONAL: Tried to filter low-confidence predictions
-        # threshold = 0.5
-        # boxes = boxes[scores > threshold]
-        # labels = labels[scores > threshold]
-        # scores = scores[scores > threshold]        
+        print(f"BBoxes: {boxes}")     
 
         #FOR TEST: look at the boxes in the image
         # for i, box in enumerate(boxes):
@@ -86,12 +76,12 @@ class ObjectDetectionNode(Node):
         #     #DRAW Bbox
         #     cv2.rectangle(cv_image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
 
-        #     #LABEL + SCORE text
+        #     #LABEL + SCORE text once we have label+score lol
         #     cv2.putText(cv_image, f'{label}: {score:.2f}', (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
         # #DISP Image with Bboxes
         # cv2.imshow("Detected Objects", cv_image)
-        # cv2.waitKey(1)    
+        # cv2.waitKey(1) 
         
     
 def main(args=None):
