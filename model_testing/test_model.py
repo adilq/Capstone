@@ -1,0 +1,51 @@
+import cv2
+
+from ultralytics import YOLO
+import torch
+
+cv_image = cv2.imread('goodpic.jpg')
+model = YOLO('best.pt')
+model.eval()
+result = model(cv_image)
+
+boxes_xyxy =  result[0].boxes.xyxy
+print(boxes_xyxy[:, 0])
+
+# boxes_cls =  torch.Tensor.numpy(result[0].boxes.cls)
+# boxes_conf = torch.Tensor.numpy(result[0].boxes.conf)
+# boxes_id =  torch.Tensor.numpy(result[0].boxes.id)
+
+# masks = result.masks
+# keypoints = result.keypoints  
+# probs = result.probs 
+# obb = result.obb  
+# result[0].show()  
+# result[0].save(filename="result.jpg")  
+
+
+#results = model(input_image)
+# boxes = results.pred[0].boxes  
+# labels = results.pred[0].cls  
+# scores = results.pred[0].conf
+
+#FOR TEST: look at the boxes in the image
+# for i, box in enumerate(boxes):
+#     x1, y1, x2, y2 = box
+#     label = labels[i]
+#     score = scores[i]
+
+#     #DRAW Bbox
+#     cv2.rectangle(cv_image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+
+#     #LABEL + SCORE text
+#     cv2.putText(cv_image, f'{label}: {score:.2f}', (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
+# #DISP Image with Bboxes
+# cv2.imshow("Detected Objects", cv_image)
+# cv2.waitKey(1)  
+
+# # Displaying the results:
+# print(f"Got {len(boxes)} objects")
+# print(f"BBoxes: {boxes}")
+# print(f"Labels: {labels}")
+# print(f"Scores: {scores}")
