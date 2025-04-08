@@ -115,7 +115,6 @@ class Controller(Node):
         self.odom_pose = None
 
         # controller
-        # self.K = np.zeros((3,3)) # maybe set as a parameter or can just hard code?
         self.K = np.eye(3)
         self.gain = 1 # tune later
         self.prev_ev = np.zeros((8,1))
@@ -273,31 +272,37 @@ def main(args=None):
     counter_total = 100
     
     node.get_logger().info("Starting loop.")
+    node.get_logger().info(f"Mode: {MODE}")
 
     while rclpy.ok():
         # state machine
         if COMMAND == 'abort' and MODE != GROUND:
             MODE = ABORT
+            node.get_logger().info(f"Mode: {MODE}")
         elif COMMAND == 'launch' and MODE == GROUND:
             MODE = CONNECT
+            node.get_logger().info(f"Mode: {MODE}")
         elif COMMAND == 'test':
             if FOLLOW:
                 MODE = TRACK
             else:
                 MODE = SWEEP
+            node.get_logger().info(f"Mode: {MODE}")
         elif COMMAND == 'land' and MODE != GROUND:
             MODE = LAND
+            node.get_logger().info(f"Mode: {MODE}")
 
         # behaviour
-        node.get_logger().info(f"Mode: {MODE}")
+        node.get_logger().debug(f"Mode: {MODE}")
         if MODE == CONNECT:
             # check if armed and in offboard mode
             if node.state.armed and node.state.mode == "OFFBOARD":
                 # once set, initialize positions and proceed to TAKEOFF mode
                 MODE = TAKEOFF
+                node.get_logger().info(f"Mode: {MODE}")
             else:
                 if counter >= counter_total and node.get_clock().now() - prev_request > Duration(seconds=2.0):
-                    # arm and set mode (try every 5 seconds)
+                    # arm and set mode (try every 2 seconds)
                     node.get_logger().debug(f"current mode: {node.state.mode}")
                     if not node.state.armed:
                     # if not node.state.armed and node.state.mode == "OFFBOARD":
@@ -313,21 +318,21 @@ def main(args=None):
                 
                 # publish to setpoint_local until counter == counter_total                
                 counter += 1
-           	#cmd.pose.position = node.odom_pose.pose.position
             cmd.pose.position = goal_pos.pose.position
                 
         elif MODE == TAKEOFF:
             # check distance from goal
-            node.get_logger().info(f"local goal distance: {np.abs(cmd.pose.position.z - node.odom_pose.pose.position.z)}")
+            node.get_logger().debug(f"local goal distance: {np.abs(cmd.pose.position.z - node.odom_pose.pose.position.z)}")
             if np.abs(goal_pos.pose.position.z - node.odom_pose.pose.position.z) < GOAL_TOLERANCE:
                 # if close to goal, proceed to HOVER mode
                 cmd.pose.position.z = goal_pos.pose.position.z
                 MODE = HOVER
+                node.get_logger().info(f"Mode: {MODE}")
             # if far, check distance from local goal
             elif np.abs(cmd.pose.position.z - node.odom_pose.pose.position.z) < LOCAL_GOAL_TOLERANCE:
                 # update local goal as needed in increments to ascend
-                #cmd.pose.position.z = min(cmd.pose.position.z + TAKEOFF_INCREMENT, goal_pos.pose.position.z)
-                cmd.pose.position = goal_pos.pose.position
+                cmd.pose.position.z = min(cmd.pose.position.z + TAKEOFF_INCREMENT, goal_pos.pose.position.z)
+                #cmd.pose.position = goal_pos.pose.position
         elif MODE == HOVER:
             pass 
         elif MODE == SWEEP:
@@ -349,6 +354,10 @@ def main(args=None):
                                  node.odom_pose.pose.position.y, 
                                  node.odom_pose.pose.position.z,
                                  yaw])
+            
+            print(f"cur_pose: {cur_pose.shape}")
+            print(f"delta_t: {node.delta_t} ({type(node.delta_t)})")
+            print(f"velocity: {velocity} ({type(velocity)})")
             setpoint = cur_pose + node.delta_t * velocity
             cmd.pose.position.x = setpoint[0]
             cmd.pose.position.y = setpoint[1]
@@ -371,6 +380,7 @@ def main(args=None):
                 if node.set_mode_cli.call(offb_set_mode).mode_sent == True:
                     node.get_logger().info("Landed")
                     MODE = GROUND 
+                    node.get_logger().info(f"Mode: {MODE}")
                 prev_request = node.get_clock().now()
         elif MODE == ABORT:
             # initiate auto land
@@ -387,6 +397,7 @@ def main(args=None):
                 if node.set_mode_cli.call(offb_set_mode).mode_sent == True:
                     node.get_logger().info("Landed")
                     MODE = GROUND 
+                    node.get_logger().info(f"Mode: {MODE}")
                 prev_request = node.get_clock().now()
         elif MODE == GROUND:
             # nothing?
