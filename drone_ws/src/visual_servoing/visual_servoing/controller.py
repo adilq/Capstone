@@ -5,11 +5,11 @@ import rclpy.time
 from mavros_msgs.msg import State
 from mavros_msgs.srv import SetMode, CommandBool
 import rclpy.qos
-from geometry_msgs.msg import PoseStamped, Twist
+from geometry_msgs.msg import PoseStamped, Twist, Point
 import numpy as np
 from std_srvs.srv import Trigger
 import threading 
-import tf_transformations
+import transforms3d as tf_transformations
 
 # To-do:
 # Delta pose estimate function
@@ -30,6 +30,7 @@ LOCAL_GOAL_TOLERANCE = 0.15 # [m]: height tolerance of "reached local goal"
 GOAL_TOLERANCE = 0.05
 TAKEOFF_INCREMENT = 0.2     # [m]: how much to increase takeoff goal
 LANDING_INCREMENT = 0.3
+MAXIMUM_INCREMENT = 0.5
 
 OFFSET = 0.0
 GOAL_HEIGHT = 1.5 + OFFSET
@@ -114,15 +115,17 @@ class Controller(Node):
         self.odom_sub = self.create_subscription(PoseStamped, 'mavros/local_position/pose', callback = self.odom_callback, qos_profile=rclpy.qos.qos_profile_system_default)
         self.odom_pose = None
 
+        # observed points
+        self.point_sub = self.create_subscription(Point, 'zebra_point', callback = self.zebra_point_callback, qos_profile=10)
+        self.obs = np.zeros((2,1))
+
         # controller
-        # self.K = np.zeros((3,3)) # maybe set as a parameter or can just hard code?
-        self.K = np.eye(3)
+        self.K = np.load('drone_ws/src/visual_servoing/visual_servoing/cameraK.npy')
         self.gain = 1 # tune later
-        self.prev_ev = np.zeros((8,1))
-        self.prev_v = np.zeros((4,1))
+        self.prev_ev = np.zeros((2,1))
+        self.prev_v = np.zeros((2,1))
         self.delta_t = 1 # change to time since last camera message?
         self.depth = None
-
 
     # state callback
     def state_callback(self, msg):
@@ -134,6 +137,10 @@ class Controller(Node):
         self.odom_pose = msg
         self.depth = msg.pose.position.z
         self.get_logger().debug(f"Received {msg}")
+
+    # zebra point callback
+    def zebra_point_callback(self, msg):
+        self.obs = np.array([[msg.x],[msg.y]])
 
     def get_virtual_image_coordinates(self, u, v, Z):
         '''
@@ -174,12 +181,12 @@ class Controller(Node):
         return u_v.item(), v_v.item(), Z_v.item()
 
     def jacobian(self, u_v, v_v, Z_v):
-        '''obs: 2x1 np array'''
-        J = np.array([[-1/Z_v, 0, u_v/Z_v, v_v],
-                    [0, -1/Z_v, v_v/Z_v, -u_v]], dtype=np.float64)
+        J = np.array([[-1/Z_v, 0],
+                    [0, -1/Z_v]], dtype=np.float64)
         return J
+
     
-    def get_control_velocity(self, obs, des, depths):
+    def get_control_velocity(self, obs, des):
         '''
         obs: 2xn array of the pt coords in camera frame
         des: 2xn array of desired pt coords in image coordinates
@@ -187,10 +194,7 @@ class Controller(Node):
         v: 4x1
         '''
         # velocity control input
-        v = np.zeros((4, 1))
-
-        # number of points
-        n = depths.size
+        v = np.zeros((2, 1))
 
         # TO-DO: vectorize this part?
         # Calculate error
@@ -199,19 +203,14 @@ class Controller(Node):
         cy = self.K[1,2]
 
         # Stack Jacobians
-        # self.get_logger().info(f"f: {f}, {type(f)}")
-        u = (obs[0, 0] - cx) / f
-        v = (obs[1, 0] - cy) / f
-        u_v, v_v, Z_v = self.get_virtual_image_coordinates(u, v, depths[0])
-        # self.get_logger().info(f"array shapes: {u_v.shape}, {v_v.shape}, {Z_v.shape}")
+        u_i = (obs[0, 0] - cx) / f
+        v_i = (obs[1, 0] - cy) / f
+        u_v, v_v, Z_v = self.get_virtual_image_coordinates(u_i, v_i, self.depth)
         J = self.jacobian(u_v, v_v, Z_v)
-        ev = np.array([[u_v],[v_v]]) - des[:, 0]
-        for i in range(1, n):
-            u = (obs[0, i] - cx) / f
-            v = (obs[1, i] - cy) / f
-            u_v, v_v, Z_v = self.get_virtual_image_coordinates(u, v, depths[i])
-            J = np.vstack((J, self.jacobian(u_v, v_v, Z_v)))
-            ev = np.vstack((ev, (np.array([[u_v],[v_v]]) - des[:, i])))
+        u_di = (des[0, 0] - cx) / f
+        v_di = (des[1, 0] - cy) / f
+        u_dv, v_dv, Z_dv = self.get_virtual_image_coordinates(u_di, v_di, self.depth)
+        ev = np.array([[u_v],[v_v]]) - np.array([[u_dv],[v_dv]])
 
         # Estimate motion error
         delta_ev = (ev - self.prev_ev) / (self.delta_t -  np.dot(J, self.prev_v))
@@ -230,6 +229,8 @@ class Controller(Node):
 
 def main(args=None):
     global COMMAND, MODE, FOLLOW
+
+    print(tf_transformations)
 
     # node init
     rclpy.init(args=args)
@@ -338,22 +339,14 @@ def main(args=None):
             # do visual servoing
             # if we want to stop following (maybe all the animals left the frame), set FOLLOW = False
             # TO-DO: setpoint = current pose + self.delta_t * self.get_velocity_input
-            pts_des = np.array([[1, -1], [-1, 1], [-1, -1], [1, 1]]).T
-            pts_obs = np.array([[1, -1], [-1, 1], [-1, -1], [1, 1]]).T
-            depths = np.array([node.depth, node.depth, node.depth, node.depth])
-            velocity = node.get_control_velocity(pts_des, pts_obs, depths)
-            odom_quat = node.odom_pose.pose.orientation
-            # roll, pitch, yaw = tf_transformations.euler_from_quaternion(node.odom_pose.pose.orientation)
-            roll, pitch, yaw = tf_transformations.euler_from_quaternion([odom_quat.x, odom_quat.y, odom_quat.z, odom_quat.w])
-            cur_pose = np.array([node.odom_pose.pose.position.x, 
-                                 node.odom_pose.pose.position.y, 
-                                 node.odom_pose.pose.position.z,
-                                 yaw])
-            setpoint = cur_pose + node.delta_t * velocity
+            des = np.zeros((2,1))
+            velocity = node.get_control_velocity(node.obs, des)
+            velocity = np.clip(velocity, a_min=-MAXIMUM_INCREMENT, a_max=MAXIMUM_INCREMENT)
+
+            setpoint = np.array([[node.pose.position.x],[node.pose.position.y]]) + node.delta_t * velocity
             cmd.pose.position.x = setpoint[0]
             cmd.pose.position.y = setpoint[1]
-            cmd.pose.position.z = setpoint[2]
-            # cmd.pose.orientation = setpoint[2] how to give a yaw set point?
+            cmd.pose.position.z = GOAL_HEIGHT
             
         elif MODE == LAND:
             if cmd.pose.position.z == goal_pos.pose.position.z:
