@@ -17,8 +17,9 @@ class CompressedImagePublisher(Node):
         )
         self.publisher = self.create_publisher(CompressedImage, 'image/compressed', qos)
         self.timer = self.create_timer(1, self.publish_image)  # Publish at 1 Hz
-        # self.cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)640, height=(int)480, format=(string)NV12, framerate=(fraction)1/1 ! nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert ! video/x-raw, format=(string)I420 ! nvoverlaysink")  # Open video device
-        self.cap = cv2.VideoCapture(0)# Open video device
+        self.cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)720, height=(int)480,format=(string)NV12, framerate=(fraction)1/1 ! \
+            nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert !  appsink", cv2.CAP_GSTREAMER)
+        # self.cap = cv2.VideoCapture(0)# Open video device
 # 
     def publish_image(self):
         ret, frame = self.cap.read()
