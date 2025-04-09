@@ -27,8 +27,8 @@ while not q:
         print(list(boxes_xyxy[:, 0]))
         
         if disp.lower() == 'y':
-            print(result[0])
-            if result[0].probs is not None:
+            # print(result[0])
+            # if result[0].probs is not None:
                 # boxes = result[0].boxes
                 # labels = result[0].boxes.cls  
                 # scores = result[0].boxes.conf
@@ -42,7 +42,7 @@ while not q:
 
                 #     #LABEL + SCORE text
                 #     cv2.putText(cv_image, f'{label}: {score:.2f}', (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                result[0].show()
+            result[0].show()
 
             # #DISP Image with Bboxes
             # cv2.imshow("Detected Objects", cv_image)
