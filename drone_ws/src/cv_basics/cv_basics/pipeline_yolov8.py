@@ -26,6 +26,8 @@ import cv2
 from PIL import Image as PILImage
 #YOLO
 from ultralytics import YOLO
+# other
+import os
 
 
 class ObjectDetectionNode(Node):
@@ -33,7 +35,7 @@ class ObjectDetectionNode(Node):
         super().__init__('object_detection_node') # class constructor+name
                 
         #MODEL LOAD
-        self.model = YOLO('best.pt') 
+        self.model = YOLO('~/rob498/Capstone/drone_ws/src/cv_basics/cv_basics/best.pt') 
         self.model.eval()  #EVAL
 
         #PUB
