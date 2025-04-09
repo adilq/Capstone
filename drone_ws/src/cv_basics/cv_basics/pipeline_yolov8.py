@@ -21,9 +21,9 @@ from custom_messages.msg import BoundingBoxes # Import BBox message (custom)
 #FasteR-CNN
 # from cv_bridge import CvBridge
 # import torch
-from torchvision import models, transforms
+# from torchvision import models, transforms
 import cv2
-from PIL import Image as PILImage
+# from PIL import Image as PILImage
 #YOLO
 from ultralytics import YOLO
 # other
@@ -66,9 +66,9 @@ class ObjectDetectionNode(Node):
             return
 
         #Image Preprocess - get PILImage, make tensor
-        pil_image = PILImage.fromarray(cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)) #CV2 image to PILImage
-        transform = transforms.Compose([transforms.ToTensor()])
-        input_image = transform(pil_image).unsqueeze(0)
+        # pil_image = PILImage.fromarray(cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)) #CV2 image to PILImage
+        # transform = transforms.Compose([transforms.ToTensor()])
+        # input_image = transform(pil_image).unsqueeze(0)
 
         result = self.model(cv_image)
         #results = model(input_image)
