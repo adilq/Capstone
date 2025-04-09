@@ -8,7 +8,7 @@ q = False # flag to stop execution
 
 disp = input("Do you want to display the most recent frame? y/n:")
 
-cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)720, height=(int)480,format=(string)NV12, framerate=(fraction)5/1 ! \
+cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)480, height=(int)480,format=(string)NV12, framerate=(fraction)5/1 ! \
     nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert !  appsink drop=true sync=false", cv2.CAP_GSTREAMER)
 
 while not q:
