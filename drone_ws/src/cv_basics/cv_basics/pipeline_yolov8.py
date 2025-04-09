@@ -36,14 +36,15 @@ class ObjectDetectionNode(Node):
                 
         #MODEL LOAD
         cwd = os.getcwd().split('/')
+        model_name = 'best_nano.pt'
         if cwd[-1] == 'drone_ws':
-            model_path = 'src/cv_basics/cv_basics/best.pt'
+            model_path = f'src/cv_basics/cv_basics/{model_name}'
         elif cwd[-1] == 'src':
-            model_path = 'cv_basics/cv_basics/best.pt'
+            model_path = f'cv_basics/cv_basics/{model_name}'
         elif cwd[-2:] == ['src', 'cv_basics']:
-            model_path = 'cv_basics/best.pt'
+            model_path = f'cv_basics/{model_name}'
         else:
-            model_path = 'best.pt'
+            model_path = model_name
             
         self.model = YOLO(model_path) 
         self.model.eval()  #EVAL
