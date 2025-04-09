@@ -19,7 +19,7 @@ while not q:
         else:
             print('Frame captured')
             
-        model = YOLO('best.pt')
+        model = YOLO('best_nano.pt')
         model.eval()
         result = model(cv_image)
 
