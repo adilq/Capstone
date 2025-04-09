@@ -52,10 +52,10 @@ class ObjectDetectionNode(Node):
         self.bbox_publisher = self.create_publisher(BoundingBoxes, '/bbox_out', 10) #topic bbox_out is using BoundingBox.msg type
         
         #timer to determine how fast we do the callback
-        self.timer = self.create_timer(1, self.image_callback)
+        self.timer = self.create_timer(5, self.image_callback)
         
         # capture object to keep streaming data
-        self.cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)720, height=(int)480,format=(string)NV12, framerate=(fraction)1/1 ! \
+        self.cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)720, height=(int)480,format=(string)NV12, framerate=(fraction)30/1 ! \
             nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert !  appsink", cv2.CAP_GSTREAMER)
 
     def image_callback(self):
@@ -86,6 +86,7 @@ class ObjectDetectionNode(Node):
 
         #publish
         self.bbox_publisher.publish(output)
+        self.get_logger().info("Published bboxes")
 
         #FOR TEST: look at the boxes in the image
         # for i, box in enumerate(boxes):
