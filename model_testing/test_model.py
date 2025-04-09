@@ -4,19 +4,29 @@ from ultralytics import YOLO
 # import torch
 
 # cv_image = cv2.imread('goodpic.jpg')
+q = False # flag to stop execution
+
 cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)720, height=(int)480,format=(string)NV12, framerate=(fraction)30/1 ! \
     nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert !  appsink", cv2.CAP_GSTREAMER)
 
-ret, cv_image = cap.read()
-if not ret:
-    print('Failed to capture image from /dev/video0')
 
-model = YOLO('best.pt')
-model.eval()
-result = model(cv_image)
+while not q:
+    try:
+        ret, cv_image = cap.read()
+        if not ret:
+            print('Failed to capture image from /dev/video0')
+        else:
+            print('Frame captured')
+            
+        model = YOLO('best.pt')
+        model.eval()
+        result = model(cv_image)
 
-boxes_xyxy =  result[0].boxes.xyxy
-print(list(boxes_xyxy[:, 0]))
+        boxes_xyxy =  result[0].boxes.xyxy
+        print(list(boxes_xyxy[:, 0]))
+    except KeyboardInterrupt:
+        print("End test")
+        q = True
 
 # boxes_cls =  torch.Tensor.numpy(result[0].boxes.cls)
 # boxes_conf = torch.Tensor.numpy(result[0].boxes.conf)
