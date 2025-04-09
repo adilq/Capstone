@@ -74,15 +74,16 @@ class ObjectDetectionNode(Node):
         #results = model(input_image)
         
         output = BoundingBoxes()
-
-        boxes_xyxy = (result[0].boxes.xyxy)
-        output.x1 = boxes_xyxy[:, 0]
-        output.y1 = boxes_xyxy[:, 1]
-        output.x2 = boxes_xyxy[:, 2]
-        output.y2 = boxes_xyxy[:, 3]
-        output.cls =  (result[0].boxes.cls)
-        output.conf = (result[0].boxes.conf)
-        output.track_id =  (result[0].boxes.id)
+        if result[0].probs is not None:
+            # we detected something, fill message
+            boxes_xyxy = (result[0].boxes.xyxy)
+            output.x1 = boxes_xyxy[:, 0]
+            output.y1 = boxes_xyxy[:, 1]
+            output.x2 = boxes_xyxy[:, 2]
+            output.y2 = boxes_xyxy[:, 3]
+            output.cls =  (result[0].boxes.cls)
+            output.conf = (result[0].boxes.conf)
+            output.track_id =  (result[0].boxes.id)
 
         #publish
         self.bbox_publisher.publish(output)
