@@ -46,7 +46,7 @@ while not q:
 
             # #DISP Image with Bboxes
             cv2.imshow("Detected Objects", cv_image)
-            cv2.waitKey(0)  
+            cv2.waitKey(1)  
         
     except KeyboardInterrupt:
         print("End test")
