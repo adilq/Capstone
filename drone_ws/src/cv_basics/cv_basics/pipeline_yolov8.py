@@ -53,7 +53,7 @@ class ObjectDetectionNode(Node):
         self.bbox_publisher = self.create_publisher(BoundingBoxes, '/bbox_out', 10) #topic bbox_out is using BoundingBox.msg type
         
         #timer to determine how fast we do the callback
-        self.timer = self.create_timer(0.5, self.image_callback)
+        self.timer = self.create_timer(0.2, self.image_callback)
         
         # capture object to keep streaming data
         self.cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)640, height=(int)640,format=(string)NV12, framerate=(fraction)10/1 ! \
