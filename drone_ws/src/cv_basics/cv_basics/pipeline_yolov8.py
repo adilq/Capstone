@@ -35,7 +35,17 @@ class ObjectDetectionNode(Node):
         super().__init__('object_detection_node') # class constructor+name
                 
         #MODEL LOAD
-        self.model = YOLO('~/rob498/Capstone/drone_ws/src/cv_basics/cv_basics/best.pt') 
+        cwd = os.getcwd().split('/')
+        if cwd[-1] == 'drone_ws':
+            model_path = 'src/cv_basics/cv_basics/best.pt'
+        elif cwd[-1] == 'src':
+            model_path = 'cv_basics/cv_basics/best.pt'
+        elif cwd[-2:] == ['src', 'cv_basics']:
+            model_path = 'cv_basics/best.pt'
+        else:
+            model_path = 'best.pt'
+            
+        self.model = YOLO(model_path) 
         self.model.eval()  #EVAL
 
         #PUB
