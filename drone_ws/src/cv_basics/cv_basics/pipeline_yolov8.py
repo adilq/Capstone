@@ -20,12 +20,14 @@ from rclpy.node import Node
 from custom_messages.msg import BoundingBoxes # Import BBox message (custom)
 #FasteR-CNN
 # from cv_bridge import CvBridge
-import torch
-from torchvision import models, transforms
+# import torch
+# from torchvision import models, transforms
 import cv2
-from PIL import Image as PILImage
+# from PIL import Image as PILImage
 #YOLO
 from ultralytics import YOLO
+# other
+import os
 
 
 class ObjectDetectionNode(Node):
@@ -33,17 +35,28 @@ class ObjectDetectionNode(Node):
         super().__init__('object_detection_node') # class constructor+name
                 
         #MODEL LOAD
-        self.model = YOLO('best.pt') 
+        cwd = os.getcwd().split('/')
+        if cwd[-1] == 'drone_ws':
+            model_path = 'src/cv_basics/cv_basics/best.pt'
+        elif cwd[-1] == 'src':
+            model_path = 'cv_basics/cv_basics/best.pt'
+        elif cwd[-2:] == ['src', 'cv_basics']:
+            model_path = 'cv_basics/best.pt'
+        else:
+            model_path = 'best.pt'
+            
+        self.model = YOLO(model_path) 
         self.model.eval()  #EVAL
 
         #PUB
         self.bbox_publisher = self.create_publisher(BoundingBoxes, '/bbox_out', 10) #topic bbox_out is using BoundingBox.msg type
         
         #timer to determine how fast we do the callback
-        self.timer = self.create_timer(1, self.image_callback)
+        self.timer = self.create_timer(5, self.image_callback)
         
         # capture object to keep streaming data
-        self.cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)720, height=(int)480,format=(string)NV12, framerate=(fraction)1/1 ! nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert !  appsink")
+        self.cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)720, height=(int)480,format=(string)NV12, framerate=(fraction)30/1 ! \
+            nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert !  appsink", cv2.CAP_GSTREAMER)
 
     def image_callback(self):
         # get a frame
@@ -53,9 +66,9 @@ class ObjectDetectionNode(Node):
             return
 
         #Image Preprocess - get PILImage, make tensor
-        pil_image = PILImage.fromarray(cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)) #CV2 image to PILImage
-        transform = transforms.Compose([transforms.ToTensor()])
-        input_image = transform(pil_image).unsqueeze(0)
+        # pil_image = PILImage.fromarray(cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)) #CV2 image to PILImage
+        # transform = transforms.Compose([transforms.ToTensor()])
+        # input_image = transform(pil_image).unsqueeze(0)
 
         result = self.model(cv_image)
         #results = model(input_image)
@@ -73,6 +86,7 @@ class ObjectDetectionNode(Node):
 
         #publish
         self.bbox_publisher.publish(output)
+        self.get_logger().info("Published bboxes")
 
         #FOR TEST: look at the boxes in the image
         # for i, box in enumerate(boxes):
