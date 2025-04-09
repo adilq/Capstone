@@ -20,7 +20,7 @@ from rclpy.node import Node
 from custom_messages.msg import BoundingBoxes # Import BBox message (custom)
 #FasteR-CNN
 # from cv_bridge import CvBridge
-import torch
+# import torch
 from torchvision import models, transforms
 import cv2
 from PIL import Image as PILImage
