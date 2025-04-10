@@ -27,9 +27,9 @@ while not q:
         print(list(boxes_xyxy[:, 0]))
         
         if disp.lower() == 'y':
-            # print(result[0])
+            print(result[0])
             cv2.imshow("Detected Objects", cv_image)
-            if result[0].probs is not None:
+            if len(result[0].boxes.xyxy) > 0:
                 print("DETECTED!")
                 boxes = result[0].boxes
                 labels = result[0].boxes.cls  
