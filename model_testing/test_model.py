@@ -27,8 +27,8 @@ while not q:
         print(list(boxes_xyxy[:, 0]))
         
         if disp.lower() == 'y':
-            print(result[0])
-            cv2.imshow("Detected Objects", cv_image)
+            # print(result[0])
+            # cv2.imshow("Detected Objects", cv_image)
             if len(result[0].boxes.xyxy) > 0:
                 print("DETECTED!")
                 boxes = result[0].boxes
@@ -36,20 +36,20 @@ while not q:
                 scores = result[0].boxes.conf
                 for i, box in enumerate(boxes):
                     result[0].show()  
-                    result[0].save(filename="result.jpg")  
-                    x1, y1, x2, y2 = box
-                    label = labels[i]
-                    score = scores[i]
+                    # result[0].save(filename="result.jpg")  
+                    # x1, y1, x2, y2 = box
+                    # label = labels[i]
+                    # score = scores[i]
 
-                    #DRAW Bbox
-                    cv2.rectangle(cv_image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+                    # #DRAW Bbox
+                    # cv2.rectangle(cv_image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
 
-                    #LABEL + SCORE text
-                    cv2.putText(cv_image, f'{label}: {score:.2f}', (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                    # #LABEL + SCORE text
+                    # cv2.putText(cv_image, f'{label}: {score:.2f}', (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 # result[0].show()
 
             # #DISP Image with Bboxes
-            cv2.waitKey(1)  
+            # cv2.waitKey(1)  
         
     except KeyboardInterrupt:
         print("End test")
