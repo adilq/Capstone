@@ -54,7 +54,7 @@ class ObjectDetectionNode(Node):
         
         #timer to determine how fast we do the callback
         self.timer = self.create_timer(0.2, self.image_callback)
-        
+         
         # capture object to keep streaming data
         self.cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)640, height=(int)640,format=(string)NV12, framerate=(fraction)10/1 ! \
             nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert !  appsink drop=true sync=false", cv2.CAP_GSTREAMER)
