@@ -28,6 +28,7 @@ while not q:
         
         if disp.lower() == 'y':
             # print(result[0])
+            cv2.imshow("Detected Objects", cv_image)
             if result[0].probs is not None:
                 boxes = result[0].boxes
                 labels = result[0].boxes.cls  
@@ -45,7 +46,6 @@ while not q:
                 # result[0].show()
 
             # #DISP Image with Bboxes
-            cv2.imshow("Detected Objects", cv_image)
             cv2.waitKey(1)  
         
     except KeyboardInterrupt:
