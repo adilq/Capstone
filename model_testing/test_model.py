@@ -30,6 +30,7 @@ while not q:
             # print(result[0])
             cv2.imshow("Detected Objects", cv_image)
             if result[0].probs is not None:
+                print("DETECTED!")
                 boxes = result[0].boxes
                 labels = result[0].boxes.cls  
                 scores = result[0].boxes.conf
