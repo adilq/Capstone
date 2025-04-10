@@ -71,7 +71,7 @@ class ObjectDetectionNode(Node):
         # transform = transforms.Compose([transforms.ToTensor()])
         # input_image = transform(pil_image).unsqueeze(0)
 
-        result = self.model(cv_image)
+        result = self.model(cv_image, conf=0.7, half=True)
         #results = model(input_image)
         
         output = BoundingBoxes()
