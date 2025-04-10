@@ -34,6 +34,8 @@ while not q:
                 labels = result[0].boxes.cls  
                 scores = result[0].boxes.conf
                 for i, box in enumerate(boxes):
+                    result[0].show()  
+                    result[0].save(filename="result.jpg")  
                     x1, y1, x2, y2 = box
                     label = labels[i]
                     score = scores[i]
