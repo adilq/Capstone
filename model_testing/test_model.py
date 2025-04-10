@@ -21,7 +21,7 @@ while not q:
             
         model = YOLO('best_nano.pt')
         model.eval()
-        result = model(cv_image)
+        result = model(cv_image, conf=0.7, half=True)
 
         boxes_xyxy =  result[0].boxes.xyxy
         print(list(boxes_xyxy[:, 0]))
