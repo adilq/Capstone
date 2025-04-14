@@ -5,7 +5,7 @@ import rclpy.time
 from mavros_msgs.msg import State
 from mavros_msgs.srv import SetMode, CommandBool
 import rclpy.qos
-from geometry_msgs.msg import PoseStamped, Twist, Point
+from geometry_msgs.msg import PoseStamped, Twist, Point, PoseArray
 import numpy as np
 from std_srvs.srv import Trigger
 import threading 
@@ -31,6 +31,12 @@ GOAL_TOLERANCE = 0.05
 TAKEOFF_INCREMENT = 0.2     # [m]: how much to increase takeoff goal
 LANDING_INCREMENT = 0.3
 MAXIMUM_INCREMENT = 0.5
+
+STAGE_RIGHT = 5.0
+STAGE_LEFT = 5.0
+UPSTAGE = 3.0
+DOWNSTAGE = 2.0
+SWEEP_PATH = PoseArray()
 
 OFFSET = 0.0
 GOAL_HEIGHT = 1.5 + OFFSET
