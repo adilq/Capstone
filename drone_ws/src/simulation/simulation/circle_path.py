@@ -8,7 +8,7 @@ import numpy as np
 import threading
 
 SCALE = 3
-n = 1000
+n = 2000
 delta_time = 0.01
 
 total_time = n * delta_time + 3

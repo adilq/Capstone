@@ -6,6 +6,7 @@ from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 
 import numpy as np
 import threading
+from scipy.spatial.transform import Rotation as R
 
 def rpy_from_quaternion(x, y, z, w):
     t0 = +2. * (w * x + y * z)
@@ -89,17 +90,21 @@ def main(args=None):
     drone_y = []
 
     while rclpy.ok():
-        r, p, y = rpy_from_quaternion(*[node.drone_pose.orientation.x, node.drone_pose.orientation.y, node.drone_pose.orientation.z, node.drone_pose.orientation.w])
-        # p += np.pi/2
-        y += np.pi
-        C = dcm_from_rpy(r, p, y)
+        # r, p, y = rpy_from_quaternion(*[node.drone_pose.orientation.x, node.drone_pose.orientation.y, node.drone_pose.orientation.z, node.drone_pose.orientation.w])
+        # # p += np.pi/2
+        # y += np.pi
+        # C = dcm_from_rpy(r, p, y)
+
+        orientation = node.drone_pose.orientation
+        rotation = R.from_quat([orientation.x, orientation.y, orientation.z, orientation.w])
+        # node.get_logger().info(str(list(rotation.as_euler('xyz'))))
+        C = rotation.as_matrix()
 
         t = np.array([[node.drone_pose.position.x, node.drone_pose.position.y, node.drone_pose.position.z]]).T 
 
         Twc = np.eye(4)
         Twc[0:3, :] = np.hstack((C, t))
-        node.get_logger().info(str((r, p, y)))
-        node.get_logger().info(str(list(Twc)))
+        # node.get_logger().info(str(list(Twc)))
 
         # apply transformation to zebra
         zebra_point = np.array([[node.box_pose.position.x], [node.box_pose.position.y], [node.box_pose.position.z], [1]])
