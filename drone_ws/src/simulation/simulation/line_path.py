@@ -15,7 +15,8 @@ class JointPublisher(Node):
         self.joint_pub = self.create_publisher(JointTrajectory, "/box/set_joint_trajectory", qos_profile=10)
 
         # rate
-        self.rate = self.create_rate(1/11)
+        # self.rate = self.create_rate(1/11)
+
 
 
 def main(args=None):
@@ -33,9 +34,9 @@ def main(args=None):
     # path
     dt = 0.01
 
-    start = 0.
-    end = 10.
-    step_size = 0.01
+    start = -5.
+    end = 20.
+    step_size = 0.005 # 0.01
 
     n = int((end - start)/step_size)
 
@@ -47,10 +48,12 @@ def main(args=None):
     for i in range(n):
         jtp = JointTrajectoryPoint()
 
-        jtp.positions = [0. + step_size*i]
+        jtp.positions = [start + step_size*i]
         jtp.time_from_start = Duration(seconds=dt).to_msg()
 
         jt.points.append(jtp)
+
+    node.rate = node.create_rate(1/(n*dt))
 
     while rclpy.ok():
         # jt = JointTrajectory()

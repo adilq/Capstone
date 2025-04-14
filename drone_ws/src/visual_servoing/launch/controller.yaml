@@ -1,0 +1,8 @@
+launch:
+  - node:
+      pkg: "visual_servoing"
+      exec: "controller"
+      name: "vs_controller"
+      param:
+        - name: "camera_k"
+          

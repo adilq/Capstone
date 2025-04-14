@@ -1,8 +1,8 @@
 launch:
   - node:
       pkg: "simulation"
-      exec: "loop_path"
-      name: "loop_waypoints_pub"
+      exec: "circle_path"
+      name: "circle_waypoints_pub"
 
   - node:
       pkg: "simulation"

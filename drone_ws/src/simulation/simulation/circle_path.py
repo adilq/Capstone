@@ -7,8 +7,8 @@ from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 import numpy as np
 import threading
 
-SCALE = 1
-n = 10000
+SCALE = 3
+n = 1000
 delta_time = 0.01
 
 total_time = n * delta_time + 3
@@ -43,11 +43,11 @@ def main(args=None):
     dt = (end - start)/n
 
     def f(t):
-        r = 2 + 4 * np.sin(t)
-        return SCALE * (r * np.sin(t) - 2)
+        r = 1
+        return SCALE * (r * np.sin(t))
 
     def g(t):
-        r = 2 + 4 * np.sin(t)
+        r = 1
         return SCALE * (r * np.cos(t))
 
     def h(t):

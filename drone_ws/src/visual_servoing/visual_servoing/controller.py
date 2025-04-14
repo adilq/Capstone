@@ -39,6 +39,35 @@ COMMAND = 'ground'
 MODE = GROUND
 FOLLOW = True
 
+def euler_from_quaternion(x, y, z, w):
+    t0 = 2. * (w * x + y * z)
+    t1 = 1. - 2 * (x*x + y*y)
+    roll_x = np.arctan2(t0, t1)
+
+    t2 = 2. * (w*y - z*x)
+    t2 = 1. if t2 > 1. else t2
+    t2 = -1. if t2 < -1. else t2
+    pitch_y = np.arcsin(t2)
+
+    t3 = 2. * (w*z + x*y)
+    t4 = 1. - 2. * (y*y + z*z)
+    yaw_z = np.arctan2(t3, t4)
+
+    # print(type(roll_x), type(pitch_y), type(yaw_z))
+    return roll_x, pitch_y, yaw_z
+
+def dcm_from_rpy(r, p, y):
+    cr = np.cos(r)
+    sr = np.sin(r)
+    cp = np.cos(p)
+    sp = np.sin(p)
+    cy = np.cos(y)
+    sy = np.sin(y)
+
+    return np.array([[cy*cp, cy*sp*sr - sy*cr, cy*sp*cr + sy*sr],
+                    [sy*cp, sy*sp*sr + cy*cr, sy*sp*cr - cy*sr],
+                    [  -sp,            cp*sr,            cp*cr]])
+
 # Callback handlers
 def handle_launch():
     # publish to some topic that tells the offb_node to do some predetermined launch sequence
@@ -88,6 +117,11 @@ def callback_abort(request, response):
 class Controller(Node):
     def __init__(self):
         super().__init__('rob498_drone_8')
+
+        self.declare_parameter("camera_k", rclpy.Parameter.Type.STRING)
+        camera_k_file = str(self.get_parameter("camera_k").value)
+        self.get_logger().info(f"Read camera calibration file at {camera_k_file}")
+
         self.srv_launch = self.create_service(Trigger, 'rob498_drone_8/comm/launch', callback_launch)
         self.srv_test = self.create_service(Trigger, 'rob498_drone_8/comm/test', callback_test)
         self.srv_land = self.create_service(Trigger, 'rob498_drone_8/comm/land', callback_land)
@@ -116,11 +150,12 @@ class Controller(Node):
         self.odom_pose = None
 
         # observed points
-        self.point_sub = self.create_subscription(Point, 'zebra_point', callback = self.zebra_point_callback, qos_profile=10)
+        self.point_sub = self.create_subscription(Point, 'zebra_pose/camera', callback = self.zebra_point_callback, qos_profile=10)
         self.obs = np.zeros((2,1))
 
         # controller
-        self.K = np.load('drone_ws/src/visual_servoing/visual_servoing/cameraK.npy')
+        # self.K = np.load('drone_ws/src/visual_servoing/visual_servoing/cameraK.npy')
+        self.K = np.load(camera_k_file)
         self.gain = 1 # tune later
         self.prev_ev = np.zeros((2,1))
         self.prev_v = np.zeros((2,1))
@@ -159,7 +194,8 @@ class Controller(Node):
         odom_quat = self.odom_pose.pose.orientation
 
         # r, p, y = tf_transformations.euler_from_quaternion(self.odom_pose.pose.orientation)
-        r, p, y = tf_transformations.euler_from_quaternion([odom_quat.x, odom_quat.y, odom_quat.z, odom_quat.w])
+        # r, p, y = tf_transformations.euler_from_quaternion([odom_quat.x, odom_quat.y, odom_quat.z, odom_quat.w])
+        r, p, y = euler_from_quaternion(*[odom_quat.x, odom_quat.y, odom_quat.z, odom_quat.w])
         cy = np.cos(y)
         sy = np.sin(y)
         cp = np.cos(p)
@@ -244,6 +280,7 @@ def main(args=None):
     # hover goal
     goal_pos = PoseStamped()
     # wait for odom message
+    node.get_logger().info("Waiting for initial pose.")
     while rclpy.ok() and not node.odom_pose:
         node.rate.sleep()
     goal_pos.pose = node.odom_pose.pose
@@ -258,6 +295,7 @@ def main(args=None):
     cmd.header.stamp = node.get_clock().now().to_msg()
 
     # wait to connect
+    node.get_logger().info("Waiting to connect.")
     while rclpy.ok() and not node.state.connected:
         node.rate.sleep()
     node.get_logger().info("Node connected.")
@@ -286,10 +324,13 @@ def main(args=None):
             node.get_logger().info(f"Mode: {MODE}")
         elif COMMAND == 'test':
             if FOLLOW:
-                MODE = TRACK
+                if MODE != TRACK:
+                    MODE = TRACK
+                    node.get_logger().info(f"Mode: {MODE}")
             else:
-                MODE = SWEEP
-            node.get_logger().info(f"Mode: {MODE}")
+                if MODE != SWEEP:
+                    MODE = SWEEP
+                    node.get_logger().info(f"Mode: {MODE}")
         elif COMMAND == 'land' and MODE != GROUND:
             MODE = LAND
             node.get_logger().info(f"Mode: {MODE}")
@@ -349,9 +390,10 @@ def main(args=None):
             velocity = node.get_control_velocity(node.obs, des)
             velocity = np.clip(velocity, a_min=-MAXIMUM_INCREMENT, a_max=MAXIMUM_INCREMENT)
 
-            setpoint = np.array([[node.pose.position.x],[node.pose.position.y]]) + node.delta_t * velocity
-            cmd.pose.position.x = setpoint[0]
-            cmd.pose.position.y = setpoint[1]
+            # setpoint = np.array([[node.pose.position.x],[node.pose.position.y]]) + node.delta_t * velocity
+            setpoint = np.array([[node.odom_pose.pose.position.x], [node.odom_pose.pose.position.y]]) + node.delta_t * velocity
+            cmd.pose.position.x = float(setpoint[0])
+            cmd.pose.position.y = float(setpoint[1])
             cmd.pose.position.z = GOAL_HEIGHT
             
         elif MODE == LAND:
