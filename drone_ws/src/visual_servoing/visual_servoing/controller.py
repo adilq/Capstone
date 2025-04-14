@@ -9,7 +9,8 @@ from geometry_msgs.msg import PoseStamped, Twist, Point
 import numpy as np
 from std_srvs.srv import Trigger
 import threading 
-import transforms3d as tf_transformations
+# import transforms3d as tf_transformations
+from scipy.spatial.transform import Rotation as R
 
 # To-do:
 # Delta pose estimate function
@@ -122,6 +123,10 @@ class Controller(Node):
         camera_k_file = str(self.get_parameter("camera_k").value)
         self.get_logger().info(f"Read camera calibration file at {camera_k_file}")
 
+        self.C_cd = np.array([[0, -1, 0],
+                              [-1, 0, 0],
+                              [0, 0, -1]], dtype=float)
+
         self.srv_launch = self.create_service(Trigger, 'rob498_drone_8/comm/launch', callback_launch)
         self.srv_test = self.create_service(Trigger, 'rob498_drone_8/comm/test', callback_test)
         self.srv_land = self.create_service(Trigger, 'rob498_drone_8/comm/land', callback_land)
@@ -195,17 +200,20 @@ class Controller(Node):
 
         # r, p, y = tf_transformations.euler_from_quaternion(self.odom_pose.pose.orientation)
         # r, p, y = tf_transformations.euler_from_quaternion([odom_quat.x, odom_quat.y, odom_quat.z, odom_quat.w])
-        r, p, y = euler_from_quaternion(*[odom_quat.x, odom_quat.y, odom_quat.z, odom_quat.w])
-        cy = np.cos(y)
-        sy = np.sin(y)
-        cp = np.cos(p)
-        sp = np.sin(p)
-        cr = np.cos(r)
-        sr = np.sin(r)
-        C = np.array([[cy, cy*sp*sr-sy*cr, cy*sp*cr+sy*sr],
-                     [sy*cp, sy*sp*sr+cy*cr, sy*sp*cr-cy*sr],
-                     [-sp, cp*sr, cp*cr]])
-        
+        # r, p, y = euler_from_quaternion(*[odom_quat.x, odom_quat.y, odom_quat.z, odom_quat.w])
+        # cy = np.cos(y)
+        # sy = np.sin(y)
+        # cp = np.cos(p)
+        # sp = np.sin(p)
+        # cr = np.cos(r)
+        # sr = np.sin(r)
+        # C = np.array([[cy, cy*sp*sr-sy*cr, cy*sp*cr+sy*sr],
+        #              [sy*cp, sy*sp*sr+cy*cr, sy*sp*cr-cy*sr],
+        #              [-sp, cp*sr, cp*cr]])
+       
+        rotation = R.from_quat([odom_quat.x, odom_quat.y, odom_quat.z, odom_quat.w])
+        C = rotation.as_matrix()
+
         virtual_coords = C@cam_coords
 
         X_v = virtual_coords[0]
@@ -241,21 +249,30 @@ class Controller(Node):
         # Stack Jacobians
         u_i = (obs[0, 0] - cx) / f
         v_i = (obs[1, 0] - cy) / f
-        u_v, v_v, Z_v = self.get_virtual_image_coordinates(u_i, v_i, self.depth)
+        # u_v, v_v, Z_v = self.get_virtual_image_coordinates(u_i, v_i, self.depth)
+        u_v, v_v, Z_v = u_i, v_i, self.depth    # assume drone is always level, skip virtual image coords step
         J = self.jacobian(u_v, v_v, Z_v)
         u_di = (des[0, 0] - cx) / f
         v_di = (des[1, 0] - cy) / f
-        u_dv, v_dv, Z_dv = self.get_virtual_image_coordinates(u_di, v_di, self.depth)
+        # u_dv, v_dv, Z_dv = self.get_virtual_image_coordinates(u_di, v_di, self.depth)
+        u_dv, v_dv, Z_dv = u_di, v_di, self.depth        
         ev = np.array([[u_v],[v_v]]) - np.array([[u_dv],[v_dv]])
 
         # Estimate motion error
-        delta_ev = (ev - self.prev_ev) / (self.delta_t -  np.dot(J, self.prev_v))
+        # delta_ev = (ev - self.prev_ev) / (self.delta_t -  np.dot(J, self.prev_v))
+        delta_ev = np.zeros((2, 1))
 
         # Get pseudoinverse
         J_inv = np.dot(np.linalg.inv(np.dot(np.transpose(J),J)),np.transpose(J))
         
         # Compute v
-        v = -self.gain * np.dot(J_inv, ev) - np.dot(J_inv, delta_ev)
+        # v = -self.gain * np.dot(J_inv, ev) - np.dot(J_inv, delta_ev)
+        v = -self.gain * np.dot(J_inv, ev)
+        # self.get_logger().info(f"{self.C_cd.shape}, {J_inv.shape}, {ev.shape}")
+        # v = -self.gain * self.C_cd @ J_inv @ ev
+
+        v = self.C_cd @ np.vstack([v, 0])
+        v = v[:2]
 
         # Save values for next iteration
         self.prev_ev = ev
@@ -266,7 +283,7 @@ class Controller(Node):
 def main(args=None):
     global COMMAND, MODE, FOLLOW
 
-    print(tf_transformations)
+    # print(tf_transformations)
 
     # node init
     rclpy.init(args=args)
@@ -332,8 +349,9 @@ def main(args=None):
                     MODE = SWEEP
                     node.get_logger().info(f"Mode: {MODE}")
         elif COMMAND == 'land' and MODE != GROUND:
-            MODE = LAND
-            node.get_logger().info(f"Mode: {MODE}")
+            if MODE != LAND:
+                MODE = LAND
+                node.get_logger().info(f"Mode: {MODE}")
 
         # behaviour
         node.get_logger().debug(f"Mode: {MODE}")

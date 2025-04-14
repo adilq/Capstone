@@ -8,10 +8,10 @@ import numpy as np
 import threading
 
 SCALE = 3
-n = 2000
+n = 5000
 delta_time = 0.01
 
-total_time = n * delta_time + 3
+total_time = 2 * n * delta_time + 5 
 
 class JointPublisher(Node):
     def __init__(self):
