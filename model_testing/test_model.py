@@ -8,8 +8,8 @@ q = False # flag to stop execution
 
 disp = input("Do you want to display the most recent frame? y/n:")
 
-cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)720, height=(int)480,format=(string)NV12, framerate=(fraction)30/1 ! \
-    nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert !  appsink", cv2.CAP_GSTREAMER)
+cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)480, height=(int)480,format=(string)NV12, framerate=(fraction)5/1 ! \
+    nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert !  appsink drop=true sync=false", cv2.CAP_GSTREAMER)
 
 while not q:
     try:
@@ -19,34 +19,37 @@ while not q:
         else:
             print('Frame captured')
             
-        model = YOLO('best.pt')
+        model = YOLO('best_nano.pt')
         model.eval()
-        result = model(cv_image)
+        result = model(cv_image, conf=0.7, half=True)
 
         boxes_xyxy =  result[0].boxes.xyxy
         print(list(boxes_xyxy[:, 0]))
         
         if disp.lower() == 'y':
             # print(result[0])
-            # if result[0].probs is not None:
-                # boxes = result[0].boxes
-                # labels = result[0].boxes.cls  
-                # scores = result[0].boxes.conf
-                # for i, box in enumerate(boxes):
-                #     x1, y1, x2, y2 = box
-                #     label = labels[i]
-                #     score = scores[i]
+            # cv2.imshow("Detected Objects", cv_image)
+            if len(result[0].boxes.xyxy) > 0:
+                print("DETECTED!")
+                boxes = result[0].boxes
+                labels = result[0].boxes.cls  
+                scores = result[0].boxes.conf
+                for i, box in enumerate(boxes):
+                    result[0].show()  
+                    # result[0].save(filename="result.jpg")  
+                    # x1, y1, x2, y2 = box
+                    # label = labels[i]
+                    # score = scores[i]
 
-                #     #DRAW Bbox
-                #     cv2.rectangle(cv_image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+                    # #DRAW Bbox
+                    # cv2.rectangle(cv_image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
 
-                #     #LABEL + SCORE text
-                #     cv2.putText(cv_image, f'{label}: {score:.2f}', (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-            result[0].show()
+                    # #LABEL + SCORE text
+                    # cv2.putText(cv_image, f'{label}: {score:.2f}', (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                # result[0].show()
 
             # #DISP Image with Bboxes
-            # cv2.imshow("Detected Objects", cv_image)
-            # cv2.waitKey(0)  
+            # cv2.waitKey(1)  
         
     except KeyboardInterrupt:
         print("End test")

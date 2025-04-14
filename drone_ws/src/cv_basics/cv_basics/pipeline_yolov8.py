@@ -36,14 +36,15 @@ class ObjectDetectionNode(Node):
                 
         #MODEL LOAD
         cwd = os.getcwd().split('/')
+        model_name = 'best_nano.pt'
         if cwd[-1] == 'drone_ws':
-            model_path = 'src/cv_basics/cv_basics/best.pt'
+            model_path = f'src/cv_basics/cv_basics/{model_name}'
         elif cwd[-1] == 'src':
-            model_path = 'cv_basics/cv_basics/best.pt'
+            model_path = f'cv_basics/cv_basics/{model_name}'
         elif cwd[-2:] == ['src', 'cv_basics']:
-            model_path = 'cv_basics/best.pt'
+            model_path = f'cv_basics/{model_name}'
         else:
-            model_path = 'best.pt'
+            model_path = model_name
             
         self.model = YOLO(model_path) 
         self.model.eval()  #EVAL
@@ -52,11 +53,11 @@ class ObjectDetectionNode(Node):
         self.bbox_publisher = self.create_publisher(BoundingBoxes, '/bbox_out', 10) #topic bbox_out is using BoundingBox.msg type
         
         #timer to determine how fast we do the callback
-        self.timer = self.create_timer(5, self.image_callback)
-        
+        self.timer = self.create_timer(0.2, self.image_callback)
+         
         # capture object to keep streaming data
-        self.cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)720, height=(int)480,format=(string)NV12, framerate=(fraction)30/1 ! \
-            nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert !  appsink", cv2.CAP_GSTREAMER)
+        self.cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)640, height=(int)640,format=(string)NV12, framerate=(fraction)10/1 ! \
+            nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert !  appsink drop=true sync=false", cv2.CAP_GSTREAMER)
 
     def image_callback(self):
         # get a frame
@@ -70,19 +71,20 @@ class ObjectDetectionNode(Node):
         # transform = transforms.Compose([transforms.ToTensor()])
         # input_image = transform(pil_image).unsqueeze(0)
 
-        result = self.model(cv_image)
+        result = self.model(cv_image, conf=0.7, half=True)
         #results = model(input_image)
         
         output = BoundingBoxes()
-
-        boxes_xyxy = (result[0].boxes.xyxy)
-        output.x1 = boxes_xyxy[:, 0]
-        output.y1 = boxes_xyxy[:, 1]
-        output.x2 = boxes_xyxy[:, 2]
-        output.y2 = boxes_xyxy[:, 3]
-        output.cls =  (result[0].boxes.cls)
-        output.conf = (result[0].boxes.conf)
-        output.track_id =  (result[0].boxes.id)
+        if result[0].probs is not None:
+            # we detected something, fill message
+            boxes_xyxy = (result[0].boxes.xyxy)
+            output.x1 = boxes_xyxy[:, 0]
+            output.y1 = boxes_xyxy[:, 1]
+            output.x2 = boxes_xyxy[:, 2]
+            output.y2 = boxes_xyxy[:, 3]
+            output.cls =  (result[0].boxes.cls)
+            output.conf = (result[0].boxes.conf)
+            output.track_id =  (result[0].boxes.id)
 
         #publish
         self.bbox_publisher.publish(output)
