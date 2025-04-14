@@ -36,7 +36,8 @@ STAGE_RIGHT = 5.0
 STAGE_LEFT = 5.0
 UPSTAGE = 3.0
 DOWNSTAGE = 2.0
-SWEEP_PATH = PoseArray()
+SWEEP_PATH = None
+NAV_THRESHOLD = 0.5
 
 OFFSET = 0.0
 GOAL_HEIGHT = 1.5 + OFFSET
@@ -234,7 +235,7 @@ class Controller(Node):
         return v
 
 def main(args=None):
-    global COMMAND, MODE, FOLLOW
+    global COMMAND, MODE, FOLLOW, SWEEP_PATH
 
     print(tf_transformations)
 
@@ -278,21 +279,27 @@ def main(args=None):
     prev_request = node.get_clock().now()
     counter = 0
     counter_total = 100
+    waypoint_counter = 0
     
     node.get_logger().info("Starting loop.")
 
     while rclpy.ok():
         # state machine
+        # ensure SWEEP_PATH = None if starting to SWEEP for the first time
         if COMMAND == 'abort' and MODE != GROUND:
+            SWEEP_PATH = None
             MODE = ABORT
         elif COMMAND == 'launch' and MODE == GROUND:
+            SWEEP_PATH = None
             MODE = CONNECT
         elif COMMAND == 'test':
             if FOLLOW:
+                SWEEP_PATH = None
                 MODE = TRACK
             else:
                 MODE = SWEEP
         elif COMMAND == 'land' and MODE != GROUND:
+            SWEEP_PATH = None
             MODE = LAND
 
         # behaviour
@@ -340,7 +347,82 @@ def main(args=None):
         elif MODE == SWEEP:
             # TO-DO: make the drone move around until it detects something to follow?
             # if something is detected and we deem it worth following, set FOLLOW = True
-            pass
+            if SWEEP_PATH == None:
+                # generate SWEEP_PATH from this point
+                x_min, x_max = STAGE_LEFT, STAGE_RIGHT
+                y_min, y_max = UPSTAGE, DOWNSTAGE
+
+                x_spacing = NAV_THRESHOLD
+                y_spacing = NAV_THRESHOLD
+
+                x_steps = int(np.floor((x_max - x_min) / x_spacing)) + 1
+                y_steps = int(np.floor((y_max - y_min) / y_spacing)) + 1
+
+                x_vals = np.linspace(x_min, x_min + x_spacing * (x_steps - 1), x_steps)
+                y_vals = np.linspace(y_min, y_min + y_spacing * (y_steps - 1), y_steps)
+
+                coords = []
+
+                for idx, y in enumerate(y_vals):
+                    if idx % 2 == 0:
+                        x_row = x_vals
+                    else:
+                        x_row = x_vals[::-1]
+
+                    y_row = np.full_like(x_row, y)
+                    row_coords = np.column_stack((x_row, y_row))
+                    coords.append(row_coords)
+
+                coords = np.vstack(coords)
+                reverse_coords = coords[-2::-1]
+                full_coords = np.vstack((coords, reverse_coords))
+    
+                SWEEP_PATH = []
+                for (x,y) in full_coords:
+                    pos = np.array([x, y, GOAL_HEIGHT])
+                    SWEEP_PATH = np.vstack((SWEEP_PATH, pos))
+
+                distances = np.sqrt((full_coords[:, 0] - node.odom_pose.pose.position.x)**2 + (full_coords[:, 1] - node.odom_pose.pose.position.y)**2)
+                min_index = np.argmin(distances)
+                closest_coord = full_coords[min_index]
+                waypoint_counter = min_index
+                goal_pos.pose.position.x = closest_coord[0]
+                goal_pos.pose.position.y = closest_coord[1]
+                goal_pos.pose.position.z = GOAL_HEIGHT
+                
+            if SWEEP_PATH != None:
+                # follow SWEEP_PATH
+                # check if we are at the goal point
+                goal_pos_pos = goal_pos.pose.position
+                goal_point = np.array([goal_pos_pos.x, goal_pos_pos.y, goal_pos_pos.z])
+                curr_pos_pos = node.odom_pose.pose.position
+                curr_point = np.array([curr_pos_pos.x, curr_pos_pos.y, curr_pos_pos.z])
+                
+                if np.linalg.norm(goal_point - curr_point) < 0.4:
+                    node.get_logger().info(f"Reached waypoint {waypoint_counter}")
+                    # we are there, set the goal to the next waypoint
+                    # check if we are at the last waypoint
+                    if waypoint_counter == (SWEEP_PATH.shape[0]-1):
+                        # that was the last waypoint, go back to hover mode
+                        SWEEP_PATH = None
+                        node.get_logger().info(f"Final waypoint reached, resetting sweep path")
+                    else:
+                        # set to the next waypoint
+                        waypoint_counter += 1
+                        new_goal_point = SWEEP_PATH[waypoint_counter, :]
+                        goal_pos.pose.position.x = new_goal_point[0]
+                        goal_pos.pose.position.y = new_goal_point[1]
+                        goal_pos.pose.position.z = new_goal_point[2]
+                        node.get_logger().info(f"Next waypoint scheduled: {new_goal_point}")
+                    
+                # make sure we are in the correct state, set command
+                if SWEEP_PATH!=None and node.state.armed and node.state.mode == 'OFFBOARD':
+                    cmd.pose.position = goal_pos.pose.position
+
+                else:
+                    # something is wrong, we should abort?
+                    MODE = ABORT
+
         elif MODE == TRACK:
             # do visual servoing
             # if we want to stop following (maybe all the animals left the frame), set FOLLOW = False
