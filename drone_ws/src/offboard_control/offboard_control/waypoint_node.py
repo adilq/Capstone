@@ -19,12 +19,12 @@ class WaypointNode(Node):
         # 1781 1884 893
 
         p2 = Pose()
-        p2.position = Point(x=1.8, y=-1.8, z=2.0)
+        p2.position = Point(x=1.8, y=-1.8, z=1.0)
         # p2.pose.orientation = Quaternion(x=0., y=0., z=0., w=1.)
         # 1765 -1778 897
 
         p3 = Pose()
-        p3.position = Point(x=-1.8, y=-1.6, z=2.0)
+        p3.position = Point(x=-1.8, y=-1.6, z=1.0)
         # p3.pose.orientation = Quaternion(x=0., y=0., z=0., w=1.)
         # -1785 -1607 941
 
