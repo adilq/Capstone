@@ -70,8 +70,11 @@ run
     * skip this step to use the default world
 
 3. run the drone simulation: `make px4_sitl gazebo-classic` in the `PX4-Autopilot` folder
+    * soon after the `home set` message, a green message saying `Ready for takeoff!` should appear. if it doesn't, try running it again.
 
 4. launch mavros: `ros2 launch px4_autonomy_modules mavros.launch.py fcu_url:=udp://:14540@127.0.0.1:14557`
+    * check ros2 is connected - if the message `High resolution IMU detected!` appears, everything's good
+    * try echoing some topics such as `/mavros/local_position/pose`
 
 5. profit
 
@@ -79,7 +82,7 @@ run
 
 1. source ROS installation and workspace
 
-2. select `box_robot` world: `export PX4_SITL_WORLD=box_robot`
+2. select `box_robot` world: `export PX4_SITL_WORLD=box_robot` (no `.world` extension!)
 
 3. run drone simulation with downward-facing camera: `make px4_sitl gazebo-classic_iris_downward_depth_camera`
 
