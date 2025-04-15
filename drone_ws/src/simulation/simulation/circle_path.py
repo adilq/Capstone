@@ -7,8 +7,8 @@ from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 import numpy as np
 import threading
 
-SCALE = 3
-n = 15000
+SCALE = 1
+n = 5000
 delta_time = 0.03 # 0.01
 
 total_time = 2 * n * delta_time + 5 

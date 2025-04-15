@@ -11,13 +11,13 @@ def generate_launch_description():
     camera_k_file = os.path.join(
         get_package_share_directory("visual_servoing"),
         "config",
-        "cameraK.npy"
+        "sim_cameraK.npy"
     )
     
     camera_rotation_file = os.path.join(
         get_package_share_directory("visual_servoing"),
         "config",
-        "rotation_camerareal_to_drone.npy"
+        "rotation_camerasim_to_drone.npy"
     )
     
     bounds_file = os.path.join(
