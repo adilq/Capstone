@@ -50,8 +50,8 @@ class ObjectDetectionNode(Node):
         else:
             model_path = model_name
             
-        self.model = YOLO(model_path) 
-        # self.model.eval()  #EVAL
+        self.model = YOLO(model_path, task='detect') 
+        self.model.eval()  #EVAL
 
         #PUB
         self.bbox_publisher = self.create_publisher(BoundingBoxes, '/bbox_out', 10) #topic bbox_out is using BoundingBox.msg type
@@ -75,8 +75,8 @@ class ObjectDetectionNode(Node):
         self.timer = self.create_timer(0.2, self.image_callback)
          
         # capture object to keep streaming data
-        self.cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)640, height=(int)640,format=(string)NV12, framerate=(fraction)10/1 ! \
-            nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert !  appsink drop=true sync=false", cv2.CAP_GSTREAMER)
+        self.cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)640, height=(int)360,format=(string)NV12, framerate=(fraction)10/1 ! \
+            nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert ! appsink drop=true sync=false", cv2.CAP_GSTREAMER)
 
     def image_callback(self):
         # get a frame
@@ -88,7 +88,7 @@ class ObjectDetectionNode(Node):
         # if self.image is None:
         #     return
 
-        cv_image = self.image
+        # cv_image = self.image
         cv2.imwrite("sim_capture.png", cv_image)
 
         result = self.model(cv_image, conf=0.2, half=True)
