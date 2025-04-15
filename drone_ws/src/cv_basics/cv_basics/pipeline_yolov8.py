@@ -85,7 +85,7 @@ class ObjectDetectionNode(Node):
         # cv2.imwrite("sim_capture.png", cv_image)
 
         result = self.model(cv_image, conf=0.5, half=True)
-        result[0].show()
+        # result[0].show()
         
         output = BoundingBoxes()
         if len(result[0].boxes.xyxy) > 0:
