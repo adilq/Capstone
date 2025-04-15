@@ -71,3 +71,7 @@ set `GOAL_HEIGHT` in `flight_test_2.py` to desired goal height
     * `land`: `ros2 service call /rob498_drone_8/comm/land std_srvs/srv/Trigger`
 
     * `abort`: `ros2 service call /rob498_drone_8/comm/abort std_srvs/srv/Trigger`
+
+## node: project
+Camera frame for reference
+![alt text](\Capstone\imgs\drone_axis.jpg "camframe")
