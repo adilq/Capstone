@@ -158,7 +158,7 @@ class Controller(Node):
         # self.point_sub = self.create_subscription(Point, 'zebra_pose/camera', callback = self.zebra_point_callback, qos_profile=10)
         self.zebra_sub = self.create_subscription(PoseStamped, 'zebra_pose/image', callback = self.zebra_pose_callback, qos_profile=10)
         self.obs = np.zeros((2,1))
-        self.last_zebra_detection = self.get_clock().now().sec
+        self.last_zebra_detection = self.get_clock().now().to_msg().sec
 
         # controller
         # self.K = np.load('drone_ws/src/visual_servoing/visual_servoing/cameraK.npy')
