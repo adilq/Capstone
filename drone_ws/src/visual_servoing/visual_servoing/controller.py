@@ -155,8 +155,8 @@ class Controller(Node):
         self.odom_pose = None
 
         # observed points
-        # self.point_sub = self.create_subscription(Point, 'zebra_pose/camera', callback = self.zebra_point_callback, qos_profile=10)
-        self.zebra_sub = self.create_subscription(PoseStamped, 'zebra_pose/image', callback = self.zebra_pose_callback, qos_profile=10)
+        self.point_sub = self.create_subscription(Point, 'zebra_pose/camera', callback = self.zebra_point_callback, qos_profile=10)
+        # self.zebra_sub = self.create_subscription(PoseStamped, 'zebra_pose/image', callback = self.zebra_pose_callback, qos_profile=10)
         self.obs = np.zeros((2,1))
         self.last_zebra_detection = self.get_clock().now().to_msg().sec
 
@@ -204,19 +204,6 @@ class Controller(Node):
 
         odom_quat = self.odom_pose.pose.orientation
 
-        # r, p, y = tf_transformations.euler_from_quaternion(self.odom_pose.pose.orientation)
-        # r, p, y = tf_transformations.euler_from_quaternion([odom_quat.x, odom_quat.y, odom_quat.z, odom_quat.w])
-        # r, p, y = euler_from_quaternion(*[odom_quat.x, odom_quat.y, odom_quat.z, odom_quat.w])
-        # cy = np.cos(y)
-        # sy = np.sin(y)
-        # cp = np.cos(p)
-        # sp = np.sin(p)
-        # cr = np.cos(r)
-        # sr = np.sin(r)
-        # C = np.array([[cy, cy*sp*sr-sy*cr, cy*sp*cr+sy*sr],
-        #              [sy*cp, sy*sp*sr+cy*cr, sy*sp*cr-cy*sr],
-        #              [-sp, cp*sr, cp*cr]])
-       
         rotation = R.from_quat([odom_quat.x, odom_quat.y, odom_quat.z, odom_quat.w])
         C = rotation.as_matrix()
 
@@ -263,6 +250,9 @@ class Controller(Node):
         # u_dv, v_dv, Z_dv = self.get_virtual_image_coordinates(u_di, v_di, self.depth)
         u_dv, v_dv, Z_dv = u_di, v_di, self.depth        
         ev = np.array([[u_v],[v_v]]) - np.array([[u_dv],[v_dv]])
+
+        self.get_logger().info(f"zebra at: ({u_v}, {v_v})")
+        self.get_logger().info(f"desired at: ({u_dv}, {v_dv}")
 
         # Estimate motion error
         # delta_ev = (ev - self.prev_ev) / (self.delta_t -  np.dot(J, self.prev_v))
@@ -401,7 +391,9 @@ def main(args=None):
                 cmd.pose.position.z = min(cmd.pose.position.z + TAKEOFF_INCREMENT, goal_pos.pose.position.z)
                 #cmd.pose.position = goal_pos.pose.position
         elif MODE == HOVER:
-            pass 
+            # pass 
+            # for debug: (TODO: remove)
+            velocity = node.get_control_velocity(node.obs, np.zeros((2, 1)))
         elif MODE == SWEEP:
             # TO-DO: make the drone move around until it detects something to follow?
             # if something is detected and we deem it worth following, set FOLLOW = True
