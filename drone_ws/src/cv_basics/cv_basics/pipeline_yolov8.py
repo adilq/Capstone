@@ -17,9 +17,11 @@ AFRIN TODO LIST:
 #ROS
 import rclpy
 from rclpy.node import Node
+from sensor_msgs.msg import Image
+from geometry_msgs.msg import PoseStamped, Point
 from custom_messages.msg import BoundingBoxes # Import BBox message (custom)
 #FasteR-CNN
-# from cv_bridge import CvBridge
+from cv_bridge import CvBridge
 # import torch
 # from torchvision import models, transforms
 import cv2
@@ -28,7 +30,7 @@ import cv2
 from ultralytics import YOLO
 # other
 import os
-
+import numpy as np
 
 class ObjectDetectionNode(Node):
     def __init__(self):
@@ -36,8 +38,7 @@ class ObjectDetectionNode(Node):
                 
         #MODEL LOAD
         cwd = os.getcwd().split('/')
-        # model_name = 'best_nano_augdata.pt'
-        model_name = 'best.onnx'
+        model_name = 'best_nano_augdata.pt'
         if cwd[-1] == 'drone_ws':
             model_path = f'src/cv_basics/cv_basics/{model_name}'
         elif cwd[-1] == 'src':
@@ -48,16 +49,31 @@ class ObjectDetectionNode(Node):
             model_path = model_name
             
         self.model = YOLO(model_path) 
-        self.model.eval()  #EVAL
+        # self.model.eval()  #EVAL
 
         #PUB
         self.bbox_publisher = self.create_publisher(BoundingBoxes, '/bbox_out', 10) #topic bbox_out is using BoundingBox.msg type
+
+        self.centroid_pub = self.create_publisher(PoseStamped, "/zebra_pose/image", 10)
+        self.centroid = PoseStamped()
+        self.centroid.header.frame_id = "camera"
         
+        # # subscriber
+        # self.image_sub = self.create_subscription(
+        #     Image,
+        #     "/camera/image_raw",
+        #     self.camera_cb,
+        #     10
+        # )
+        # self.br = CvBridge()
+        # self.image = None
+
+
         #timer to determine how fast we do the callback
         self.timer = self.create_timer(0.2, self.image_callback)
          
         # capture object to keep streaming data
-        self.cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)640, height=(int)360,format=(string)NV12, framerate=(fraction)10/1 ! \
+        self.cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)640, height=(int)640,format=(string)NV12, framerate=(fraction)10/1 ! \
             nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert !  appsink drop=true sync=false", cv2.CAP_GSTREAMER)
 
     def image_callback(self):
@@ -67,46 +83,54 @@ class ObjectDetectionNode(Node):
             self.get_logger().error('Failed to capture image from /dev/video0')
             return
 
-        #Image Preprocess - get PILImage, make tensor
-        # pil_image = PILImage.fromarray(cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)) #CV2 image to PILImage
-        # transform = transforms.Compose([transforms.ToTensor()])
-        # input_image = transform(pil_image).unsqueeze(0)
+        # if self.image is None:
+        #     return
 
-        result = self.model(cv_image, conf=0.7, half=True)
-        #results = model(input_image)
+        cv_image = self.image
+        cv2.imwrite("sim_capture.png", cv_image)
+
+        result = self.model(cv_image, conf=0.2, half=True)
         
         output = BoundingBoxes()
-        if result[0].probs is not None:
+        if len(result[0].boxes.xyxy) > 0:
             # we detected something, fill message
             boxes_xyxy = (result[0].boxes.xyxy)
-            output.x1 = boxes_xyxy[:, 0]
-            output.y1 = boxes_xyxy[:, 1]
-            output.x2 = boxes_xyxy[:, 2]
-            output.y2 = boxes_xyxy[:, 3]
-            output.cls =  (result[0].boxes.cls)
-            output.conf = (result[0].boxes.conf)
-            output.track_id =  (result[0].boxes.id)
+            bb = np.array(boxes_xyxy)
+            output.x1 = bb[:, 0].tolist()
+            output.y1 = bb[:, 1].tolist()
+            output.x2 = bb[:, 2].tolist()
+            output.y2 = bb[:, 3].tolist()
+
+            output.cls = result[0].boxes.cls.to(int).tolist()
+            output.conf = result[0].boxes.conf.tolist()
+
+            self.get_logger().info("zebras detected!")
+
+            # publish zebra pose whenever zebras are spotted in the new image
+            zebra_x, zebra_y = self.calc_centroid(boxes_xyxy)
+            self.centroid.pose.position = Point(x=float(zebra_x), y=float(zebra_y))
+            self.centroid.header.stamp = self.get_clock().now().to_msg()
+
+            self.centroid_pub.publish(self.centroid)
 
         #publish
         self.bbox_publisher.publish(output)
         self.get_logger().info("Published bboxes")
 
-        #FOR TEST: look at the boxes in the image
-        # for i, box in enumerate(boxes):
-        #     x1, y1, x2, y2 = box
-        #     label = labels[i]
-        #     score = scores[i]
-
-        #     #DRAW Bbox
-        #     cv2.rectangle(cv_image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
-
-        #     #LABEL + SCORE text once we have label+score lol
-        #     cv2.putText(cv_image, f'{label}: {score:.2f}', (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-        # #DISP Image with Bboxes
-        # cv2.imshow("Detected Objects", cv_image)
-        # cv2.waitKey(1) 
         
+
+    def camera_cb(self, msg):
+        self.get_logger().info("Receiving image.")
+        self.image = self.br.imgmsg_to_cv2(msg)
+
+    def calc_centroid(self, boxes):
+        # boxes: in xyxy Tensor form
+        bbox = np.array(boxes)
+        x = np.mean([bbox[:, 0], bbox[:, 2]])
+        y = np.mean([bbox[:, 1], bbox[:, 3]])
+
+        return x, y
+
     
 def main(args=None):
     rclpy.init(args=args)
