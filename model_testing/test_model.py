@@ -5,7 +5,7 @@ from ultralytics import YOLO
 # cv_image = cv2.imread('goodpic.jpg')
 q = False # flag to stop execution
 
-disp = input("Do you want to display the most recent frame? y/n:")
+disp = input("Display the most recent frame? y/n:")
 
 cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)640, height=(int)360,format=(string)NV12, framerate=(fraction)5/1 ! \
     nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert ! appsink drop=true sync=false", cv2.CAP_GSTREAMER)
@@ -24,17 +24,17 @@ while not q:
         result = model(cv_image, conf=0.7, half=True)
 
         boxes_xyxy =  result[0].boxes.xyxy
-        print(list(boxes_xyxy[:, 0]))
+        # print(list(boxes_xyxy[:, 0]))
         
         if disp.lower() == 'y':
             # print(result[0])
             # cv2.imshow("Detected Objects", cv_image)
+            result[0].show()
             if len(result[0].boxes.xyxy) > 0:
-                print("DETECTED!")
+                # print("DETECTED!")
                 boxes = result[0].boxes
                 labels = result[0].boxes.cls  
                 scores = result[0].boxes.conf
-                result[0].show()
                 # for i, box in enumerate(boxes):
                     # result[0].show()  
 
@@ -42,15 +42,10 @@ while not q:
                     # x1, y1, x2, y2 = box
                     # label = labels[i]
                     # score = scores[i]
-
-                    # #DRAW Bbox
+                    
                     # cv2.rectangle(cv_image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
 
-                    # #LABEL + SCORE text
                     # cv2.putText(cv_image, f'{label}: {score:.2f}', (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                # result[0].show()
-
-            # #DISP Image with Bboxes
             # cv2.waitKey(1)  
         
     except KeyboardInterrupt:
@@ -82,10 +77,4 @@ while not q:
 
 # #DISP Image with Bboxes
 # cv2.imshow("Detected Objects", cv_image)
-# cv2.waitKey(1)  
-
-# # Displaying the results:
-# print(f"Got {len(boxes)} objects")
-# print(f"BBoxes: {boxes}")
-# print(f"Labels: {labels}")
-# print(f"Scores: {scores}")
+# cv2.waitKey(1)
