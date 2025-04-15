@@ -91,7 +91,7 @@ class ObjectDetectionNode(Node):
         if len(result[0].boxes.xyxy) > 0:
             # we detected something, fill message
             boxes_xyxy = (result[0].boxes.xyxy)
-            bb = np.array(boxes_xyxy)
+            bb = np.array(boxes_xyxy.cpu())
             output.x1 = bb[:, 0].tolist()
             output.y1 = bb[:, 1].tolist()
             output.x2 = bb[:, 2].tolist()
@@ -119,7 +119,7 @@ class ObjectDetectionNode(Node):
 
     def calc_centroid(self, boxes):
         # boxes: in xyxy Tensor form
-        bbox = np.array(boxes)
+        bbox = np.array(boxes.cpu())
         x = np.mean([bbox[:, 0], bbox[:, 2]])
         y = np.mean([bbox[:, 1], bbox[:, 3]])
 
