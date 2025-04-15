@@ -6,11 +6,7 @@
 
 
 """
-AFRIN TODO LIST: 
-- label/annotate adil's camera lense corrected images so we can test on them. 
-    - speaking of which, that's gonna need a testing script
-- finish this node up - how does one load yolov8.pt into here
-
+AFRIN TODO LIST:
 # - NEXT STEPS: 2 different models, other datasets, new training resolution, only if this script is done
 
 """
@@ -68,7 +64,6 @@ class ObjectDetectionNode(Node):
         # self.br = CvBridge()
         # self.image = None
 
-
         #timer to determine how fast we do the callback
         self.timer = self.create_timer(0.2, self.image_callback)
          
@@ -86,10 +81,11 @@ class ObjectDetectionNode(Node):
         # if self.image is None:
         #     return
 
-        cv_image = self.image
-        cv2.imwrite("sim_capture.png", cv_image)
+        # cv_image = self.image
+        # cv2.imwrite("sim_capture.png", cv_image)
 
-        result = self.model(cv_image, conf=0.2, half=True)
+        result = self.model(cv_image, conf=0.5, half=True)
+        result[0].show()
         
         output = BoundingBoxes()
         if len(result[0].boxes.xyxy) > 0:
@@ -117,11 +113,9 @@ class ObjectDetectionNode(Node):
         self.bbox_publisher.publish(output)
         self.get_logger().info("Published bboxes")
 
-        
-
-    def camera_cb(self, msg):
-        self.get_logger().info("Receiving image.")
-        self.image = self.br.imgmsg_to_cv2(msg)
+    # def camera_cb(self, msg):
+    #     self.get_logger().info("Receiving image.")
+    #     self.image = self.br.imgmsg_to_cv2(msg)
 
     def calc_centroid(self, boxes):
         # boxes: in xyxy Tensor form
@@ -145,4 +139,4 @@ def main(args=None):
         rclpy.shutdown()
 
 if __name__=='__main__':
- main()
+    main()
