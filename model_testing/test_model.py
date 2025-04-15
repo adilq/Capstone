@@ -1,15 +1,14 @@
 import cv2
 
 from ultralytics import YOLO
-# import torch
 
 # cv_image = cv2.imread('goodpic.jpg')
 q = False # flag to stop execution
 
 disp = input("Do you want to display the most recent frame? y/n:")
 
-cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)480, height=(int)480,format=(string)NV12, framerate=(fraction)5/1 ! \
-    nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert !  appsink drop=true sync=false", cv2.CAP_GSTREAMER)
+cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)640, height=(int)360,format=(string)NV12, framerate=(fraction)5/1 ! \
+    nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert ! appsink drop=true sync=false", cv2.CAP_GSTREAMER)
 
 while not q:
     try:
@@ -19,7 +18,8 @@ while not q:
         else:
             print('Frame captured')
             
-        model = YOLO('best_nano.pt')
+        model = YOLO('best_nano_augdata.pt')
+        # model = YOLO('best_nano.pt')
         model.eval()
         result = model(cv_image, conf=0.7, half=True)
 
@@ -34,8 +34,10 @@ while not q:
                 boxes = result[0].boxes
                 labels = result[0].boxes.cls  
                 scores = result[0].boxes.conf
-                for i, box in enumerate(boxes):
-                    result[0].show()  
+                result[0].show()
+                # for i, box in enumerate(boxes):
+                    # result[0].show()  
+
                     # result[0].save(filename="result.jpg")  
                     # x1, y1, x2, y2 = box
                     # label = labels[i]

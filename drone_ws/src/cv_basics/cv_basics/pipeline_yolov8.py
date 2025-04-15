@@ -36,8 +36,8 @@ class ObjectDetectionNode(Node):
                 
         #MODEL LOAD
         cwd = os.getcwd().split('/')
-        # model_name = 'best_nano_augdata.pt'
-        model_name = 'best.onnx'
+        model_name = 'best_nano_augdata.pt'
+        # model_name = 'best.onnx'
         if cwd[-1] == 'drone_ws':
             model_path = f'src/cv_basics/cv_basics/{model_name}'
         elif cwd[-1] == 'src':
@@ -47,7 +47,7 @@ class ObjectDetectionNode(Node):
         else:
             model_path = model_name
             
-        self.model = YOLO(model_path) 
+        self.model = YOLO(model_path, task='detect') 
         self.model.eval()  #EVAL
 
         #PUB
@@ -58,7 +58,7 @@ class ObjectDetectionNode(Node):
          
         # capture object to keep streaming data
         self.cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)640, height=(int)360,format=(string)NV12, framerate=(fraction)10/1 ! \
-            nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert !  appsink drop=true sync=false", cv2.CAP_GSTREAMER)
+            nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert ! appsink drop=true sync=false", cv2.CAP_GSTREAMER)
 
     def image_callback(self):
         # get a frame
