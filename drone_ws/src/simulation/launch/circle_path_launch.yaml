@@ -1,0 +1,18 @@
+launch:
+  - node:
+      pkg: "simulation"
+      exec: "circle_path"
+      name: "circle_waypoints_pub"
+
+  - node:
+      pkg: "simulation"
+      exec: "joint_to_pose"
+      name: "joint_to_pose_pub"
+
+  - node:
+      pkg: "simulation"
+      exec: "cam_pose_pub"
+      name: "cam_pose_pub"
+      param:
+        - name: "camera_k"
+          value: "/home/yifei/capstone/Capstone/drone_ws/src/visual_servoing/visual_servoing/cameraK.npy"

@@ -21,6 +21,7 @@ class PoseBroadcaster(Node):
         self.theta_joint = 0.
 
         self.pose_pub = self.create_publisher(PoseStamped, f"{NAMESPACE}/position/global", qos_profile=10)
+        # self.point_pub = self.create_publisher(Point, f"zebra_point", qos_profile=10)
 
         self.rate = self.create_rate(20)
 
@@ -63,7 +64,11 @@ def main(args=None):
 
         # node.get_logger().info(f"publishing message of type {type(pose)}")
         node.pose_pub.publish(pose)
+        # node.point_pub.publish(pose.pose.position)
+
         node.rate.sleep()
+
+        
 
 
     rclpy.shutdown()

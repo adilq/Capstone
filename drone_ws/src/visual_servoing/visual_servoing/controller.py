@@ -5,11 +5,12 @@ import rclpy.time
 from mavros_msgs.msg import State
 from mavros_msgs.srv import SetMode, CommandBool
 import rclpy.qos
-from geometry_msgs.msg import PoseStamped, Twist
+from geometry_msgs.msg import PoseStamped, Twist, Point
 import numpy as np
 from std_srvs.srv import Trigger
 import threading 
-import tf_transformations
+# import transforms3d as tf_transformations
+from scipy.spatial.transform import Rotation as R
 
 # To-do:
 # Delta pose estimate function
@@ -30,13 +31,43 @@ LOCAL_GOAL_TOLERANCE = 0.15 # [m]: height tolerance of "reached local goal"
 GOAL_TOLERANCE = 0.05
 TAKEOFF_INCREMENT = 0.2     # [m]: how much to increase takeoff goal
 LANDING_INCREMENT = 0.3
+MAXIMUM_INCREMENT = 0.5
 
 OFFSET = 0.0
-GOAL_HEIGHT = 1.5 + OFFSET
+GOAL_HEIGHT = 2. # 1.5 + OFFSET
 
 COMMAND = 'ground'
 MODE = GROUND
-FOLLOW = False
+FOLLOW = True
+
+def euler_from_quaternion(x, y, z, w):
+    t0 = 2. * (w * x + y * z)
+    t1 = 1. - 2 * (x*x + y*y)
+    roll_x = np.arctan2(t0, t1)
+
+    t2 = 2. * (w*y - z*x)
+    t2 = 1. if t2 > 1. else t2
+    t2 = -1. if t2 < -1. else t2
+    pitch_y = np.arcsin(t2)
+
+    t3 = 2. * (w*z + x*y)
+    t4 = 1. - 2. * (y*y + z*z)
+    yaw_z = np.arctan2(t3, t4)
+
+    # print(type(roll_x), type(pitch_y), type(yaw_z))
+    return roll_x, pitch_y, yaw_z
+
+def dcm_from_rpy(r, p, y):
+    cr = np.cos(r)
+    sr = np.sin(r)
+    cp = np.cos(p)
+    sp = np.sin(p)
+    cy = np.cos(y)
+    sy = np.sin(y)
+
+    return np.array([[cy*cp, cy*sp*sr - sy*cr, cy*sp*cr + sy*sr],
+                    [sy*cp, sy*sp*sr + cy*cr, sy*sp*cr - cy*sr],
+                    [  -sp,            cp*sr,            cp*cr]])
 
 # Callback handlers
 def handle_launch():
@@ -87,6 +118,15 @@ def callback_abort(request, response):
 class Controller(Node):
     def __init__(self):
         super().__init__('rob498_drone_8')
+
+        self.declare_parameter("camera_k", rclpy.Parameter.Type.STRING)
+        camera_k_file = str(self.get_parameter("camera_k").value)
+        self.get_logger().info(f"Read camera calibration file at {camera_k_file}")
+
+        self.C_cd = np.array([[0, -1, 0],
+                              [-1, 0, 0],
+                              [0, 0, -1]], dtype=float)
+
         self.srv_launch = self.create_service(Trigger, 'rob498_drone_8/comm/launch', callback_launch)
         self.srv_test = self.create_service(Trigger, 'rob498_drone_8/comm/test', callback_test)
         self.srv_land = self.create_service(Trigger, 'rob498_drone_8/comm/land', callback_land)
@@ -114,14 +154,20 @@ class Controller(Node):
         self.odom_sub = self.create_subscription(PoseStamped, 'mavros/local_position/pose', callback = self.odom_callback, qos_profile=rclpy.qos.qos_profile_system_default)
         self.odom_pose = None
 
+        # observed points
+        self.point_sub = self.create_subscription(Point, 'zebra_pose/camera', callback = self.zebra_point_callback, qos_profile=10)
+        # self.zebra_sub = self.create_subscription(PoseStamped, 'zebra_pose/image', callback = self.zebra_pose_callback, qos_profile=10)
+        self.obs = np.zeros((2,1))
+        self.last_zebra_detection = self.get_clock().now().to_msg().sec
+
         # controller
-        self.K = np.zeros((3,3)) # maybe set as a parameter or can just hard code?
+        # self.K = np.load('drone_ws/src/visual_servoing/visual_servoing/cameraK.npy')
+        self.K = np.load(camera_k_file)
         self.gain = 1 # tune later
-        self.prev_ev = np.zeros((8,1))
-        self.prev_v = np.zeros((4,1))
+        self.prev_ev = np.zeros((2,1))
+        self.prev_v = np.zeros((2,1))
         self.delta_t = 1 # change to time since last camera message?
         self.depth = None
-
 
     # state callback
     def state_callback(self, msg):
@@ -133,6 +179,14 @@ class Controller(Node):
         self.odom_pose = msg
         self.depth = msg.pose.position.z
         self.get_logger().debug(f"Received {msg}")
+
+    # zebra point callback
+    def zebra_point_callback(self, msg):
+        self.obs = np.array([[msg.x],[msg.y]])
+
+    def zebra_pose_callback(self, msg):
+        self.obs = np.array([[msg.pose.position.x], [msg.pose.position.y]])
+        self.last_zebra_detection = msg.header.stamp.sec
 
     def get_virtual_image_coordinates(self, u, v, Z):
         '''
@@ -148,17 +202,11 @@ class Controller(Node):
 
         cam_coords = np.array([[X], [Y], [Z]])
 
-        r, p, y = tf_transformations.euler_from_quaternion(self.odom_pose.pose.orientation)
-        cy = np.cos(y)
-        sy = np.sin(y)
-        cp = np.cos(p)
-        sp = np.sin(p)
-        cr = np.cos(r)
-        sr = np.sin(r)
-        C = np.array([[cy, cy*sp*sr-sy*cr, cy*sp*cr+sy*sr],
-                     [sy*cp, sy*sp*sr+cy*cr, sy*sp*cr-cy*sr],
-                     [-sp, cp*sr, cp*cr]])
-        
+        odom_quat = self.odom_pose.pose.orientation
+
+        rotation = R.from_quat([odom_quat.x, odom_quat.y, odom_quat.z, odom_quat.w])
+        C = rotation.as_matrix()
+
         virtual_coords = C@cam_coords
 
         X_v = virtual_coords[0]
@@ -167,15 +215,15 @@ class Controller(Node):
         u_v = X_v/Z_v
         v_v = Y_v/Z_v
 
-        return u_v, v_v, Z_v
+        return u_v.item(), v_v.item(), Z_v.item()
 
     def jacobian(self, u_v, v_v, Z_v):
-        '''obs: 2x1 np array'''
-        J = np.array([[-1/Z_v, 0, u_v/Z_v, v_v],
-                    [0, -1/Z_v, v_v/Z_v, -u_v]], dtype=np.float64)
+        J = np.array([[-1/Z_v, 0],
+                    [0, -1/Z_v]], dtype=np.float64)
         return J
+
     
-    def get_control_velocity(self, obs, des, depths):
+    def get_control_velocity(self, obs, des):
         '''
         obs: 2xn array of the pt coords in camera frame
         des: 2xn array of desired pt coords in image coordinates
@@ -183,10 +231,7 @@ class Controller(Node):
         v: 4x1
         '''
         # velocity control input
-        v = np.zeros((4, 1))
-
-        # number of points
-        n = depths.size
+        v = np.zeros((2, 1))
 
         # TO-DO: vectorize this part?
         # Calculate error
@@ -195,26 +240,35 @@ class Controller(Node):
         cy = self.K[1,2]
 
         # Stack Jacobians
-        u = (obs[0, 0] - cx) / f
-        v = (obs[1, 0] - cy) / f
-        u_v, v_v, Z_v = self.get_virtual_image_coordinates(u, v, depths[0])
+        u_i = (obs[0, 0] - cx) / f
+        v_i = (obs[1, 0] - cy) / f
+        # u_v, v_v, Z_v = self.get_virtual_image_coordinates(u_i, v_i, self.depth)
+        u_v, v_v, Z_v = u_i, v_i, self.depth    # assume drone is always level, skip virtual image coords step
         J = self.jacobian(u_v, v_v, Z_v)
-        ev = np.array([[u_v],[v_v]]) - des[:, 0]
-        for i in range(1, n):
-            u = (obs[0, i] - cx) / f
-            v = (obs[1, i] - cy) / f
-            u_v, v_v, Z_v = self.get_virtual_image_coordinates(u, v, depths[i])
-            J = np.vstack((J, self.jacobian(u_v, v_v, Z_v)))
-            ev = np.vstack((ev, (np.array([[u_v],[v_v]]) - des[:, i])))
+        u_di = (des[0, 0] - cx) / f
+        v_di = (des[1, 0] - cy) / f
+        # u_dv, v_dv, Z_dv = self.get_virtual_image_coordinates(u_di, v_di, self.depth)
+        u_dv, v_dv, Z_dv = u_di, v_di, self.depth        
+        ev = np.array([[u_v],[v_v]]) - np.array([[u_dv],[v_dv]])
+
+        self.get_logger().info(f"zebra at: ({u_v}, {v_v})")
+        self.get_logger().info(f"desired at: ({u_dv}, {v_dv}")
 
         # Estimate motion error
-        delta_ev = (ev - self.prev_ev) / (self.delta_t -  np.dot(J, self.prev_v))
+        # delta_ev = (ev - self.prev_ev) / (self.delta_t -  np.dot(J, self.prev_v))
+        delta_ev = np.zeros((2, 1))
 
         # Get pseudoinverse
         J_inv = np.dot(np.linalg.inv(np.dot(np.transpose(J),J)),np.transpose(J))
         
         # Compute v
-        v = -self.gain * np.dot(J_inv, ev) - np.dot(J_inv, delta_ev)
+        # v = -self.gain * np.dot(J_inv, ev) - np.dot(J_inv, delta_ev)
+        v = -self.gain * np.dot(J_inv, ev)
+        # self.get_logger().info(f"{self.C_cd.shape}, {J_inv.shape}, {ev.shape}")
+        # v = -self.gain * self.C_cd @ J_inv @ ev
+
+        v = self.C_cd @ np.vstack([v, 0])
+        v = v[:2]
 
         # Save values for next iteration
         self.prev_ev = ev
@@ -224,6 +278,8 @@ class Controller(Node):
 
 def main(args=None):
     global COMMAND, MODE, FOLLOW
+
+    # print(tf_transformations)
 
     # node init
     rclpy.init(args=args)
@@ -237,6 +293,7 @@ def main(args=None):
     # hover goal
     goal_pos = PoseStamped()
     # wait for odom message
+    node.get_logger().info("Waiting for initial pose.")
     while rclpy.ok() and not node.odom_pose:
         node.rate.sleep()
     goal_pos.pose = node.odom_pose.pose
@@ -251,6 +308,7 @@ def main(args=None):
     cmd.header.stamp = node.get_clock().now().to_msg()
 
     # wait to connect
+    node.get_logger().info("Waiting to connect.")
     while rclpy.ok() and not node.state.connected:
         node.rate.sleep()
     node.get_logger().info("Node connected.")
@@ -267,31 +325,41 @@ def main(args=None):
     counter_total = 100
     
     node.get_logger().info("Starting loop.")
+    node.get_logger().info(f"Mode: {MODE}")
 
     while rclpy.ok():
         # state machine
         if COMMAND == 'abort' and MODE != GROUND:
             MODE = ABORT
+            node.get_logger().info(f"Mode: {MODE}")
         elif COMMAND == 'launch' and MODE == GROUND:
             MODE = CONNECT
+            node.get_logger().info(f"Mode: {MODE}")
         elif COMMAND == 'test':
             if FOLLOW:
-                MODE = TRACK
+                if MODE != TRACK:
+                    MODE = TRACK
+                    node.get_logger().info(f"Mode: {MODE}")
             else:
-                MODE = SWEEP
+                if MODE != SWEEP:
+                    MODE = SWEEP
+                    node.get_logger().info(f"Mode: {MODE}")
         elif COMMAND == 'land' and MODE != GROUND:
-            MODE = LAND
+            if MODE != LAND:
+                MODE = LAND
+                node.get_logger().info(f"Mode: {MODE}")
 
         # behaviour
-        node.get_logger().info(f"Mode: {MODE}")
+        node.get_logger().debug(f"Mode: {MODE}")
         if MODE == CONNECT:
             # check if armed and in offboard mode
             if node.state.armed and node.state.mode == "OFFBOARD":
                 # once set, initialize positions and proceed to TAKEOFF mode
                 MODE = TAKEOFF
+                node.get_logger().info(f"Mode: {MODE}")
             else:
                 if counter >= counter_total and node.get_clock().now() - prev_request > Duration(seconds=2.0):
-                    # arm and set mode (try every 5 seconds)
+                    # arm and set mode (try every 2 seconds)
                     node.get_logger().debug(f"current mode: {node.state.mode}")
                     if not node.state.armed:
                     # if not node.state.armed and node.state.mode == "OFFBOARD":
@@ -307,23 +375,25 @@ def main(args=None):
                 
                 # publish to setpoint_local until counter == counter_total                
                 counter += 1
-           	#cmd.pose.position = node.odom_pose.pose.position
             cmd.pose.position = goal_pos.pose.position
                 
         elif MODE == TAKEOFF:
             # check distance from goal
-            node.get_logger().info(f"local goal distance: {np.abs(cmd.pose.position.z - node.odom_pose.pose.position.z)}")
+            node.get_logger().debug(f"local goal distance: {np.abs(cmd.pose.position.z - node.odom_pose.pose.position.z)}")
             if np.abs(goal_pos.pose.position.z - node.odom_pose.pose.position.z) < GOAL_TOLERANCE:
                 # if close to goal, proceed to HOVER mode
                 cmd.pose.position.z = goal_pos.pose.position.z
                 MODE = HOVER
+                node.get_logger().info(f"Mode: {MODE}")
             # if far, check distance from local goal
             elif np.abs(cmd.pose.position.z - node.odom_pose.pose.position.z) < LOCAL_GOAL_TOLERANCE:
                 # update local goal as needed in increments to ascend
-                #cmd.pose.position.z = min(cmd.pose.position.z + TAKEOFF_INCREMENT, goal_pos.pose.position.z)
-                cmd.pose.position = goal_pos.pose.position
+                cmd.pose.position.z = min(cmd.pose.position.z + TAKEOFF_INCREMENT, goal_pos.pose.position.z)
+                #cmd.pose.position = goal_pos.pose.position
         elif MODE == HOVER:
-            pass 
+            # pass 
+            # for debug: (TODO: remove)
+            velocity = node.get_control_velocity(node.obs, np.zeros((2, 1)))
         elif MODE == SWEEP:
             # TO-DO: make the drone move around until it detects something to follow?
             # if something is detected and we deem it worth following, set FOLLOW = True
@@ -332,20 +402,15 @@ def main(args=None):
             # do visual servoing
             # if we want to stop following (maybe all the animals left the frame), set FOLLOW = False
             # TO-DO: setpoint = current pose + self.delta_t * self.get_velocity_input
-            pts_des = np.array([[1, -1], [-1, 1], [-1, -1], [1, 1]]).T
-            pts_obs = np.array([[1, -1], [-1, 1], [-1, -1], [1, 1]]).T
-            depths = np.array([node.depth, node.depth, node.depth, node.depth])
-            velocity = node.get_control_velocity(pts_des, pts_obs, depths)
-            roll, pitch, yaw = tf_transformations.euler_from_quaternion(node.odom_pose.pose.orientation)
-            cur_pose = np.array([node.odom_pose.pose.position.x, 
-                                 node.odom_pose.pose.position.y, 
-                                 node.odom_pose.pose.position.z,
-                                 yaw])
-            setpoint = cur_pose + node.delta_t * velocity
-            cmd.pose.position.x = setpoint[0]
-            cmd.pose.position.y = setpoint[1]
-            cmd.pose.position.z = setpoint[2]
-            # cmd.pose.orientation = setpoint[2] how to give a yaw set point?
+            des = np.zeros((2,1))
+            velocity = node.get_control_velocity(node.obs, des)
+            velocity = np.clip(velocity, a_min=-MAXIMUM_INCREMENT, a_max=MAXIMUM_INCREMENT)
+
+            # setpoint = np.array([[node.pose.position.x],[node.pose.position.y]]) + node.delta_t * velocity
+            setpoint = np.array([[node.odom_pose.pose.position.x], [node.odom_pose.pose.position.y]]) + node.delta_t * velocity
+            cmd.pose.position.x = float(setpoint[0])
+            cmd.pose.position.y = float(setpoint[1])
+            cmd.pose.position.z = GOAL_HEIGHT
             
         elif MODE == LAND:
             if cmd.pose.position.z == goal_pos.pose.position.z:
@@ -363,6 +428,7 @@ def main(args=None):
                 if node.set_mode_cli.call(offb_set_mode).mode_sent == True:
                     node.get_logger().info("Landed")
                     MODE = GROUND 
+                    node.get_logger().info(f"Mode: {MODE}")
                 prev_request = node.get_clock().now()
         elif MODE == ABORT:
             # initiate auto land
@@ -379,6 +445,7 @@ def main(args=None):
                 if node.set_mode_cli.call(offb_set_mode).mode_sent == True:
                     node.get_logger().info("Landed")
                     MODE = GROUND 
+                    node.get_logger().info(f"Mode: {MODE}")
                 prev_request = node.get_clock().now()
         elif MODE == GROUND:
             # nothing?
