@@ -39,14 +39,14 @@ MAXIMUM_INCREMENT = 0.3
 TRACK_TIMEOUT = 20          # [s]: how much time since last zebra pose received to return to sweeping
 
 OFFSET = 0.0
-GOAL_HEIGHT = 0.5 # 1.5 + OFFSET
+GOAL_HEIGHT = 1. # 0.5 # 1.5 + OFFSET
 
 HOME = np.array([0., 1., GOAL_HEIGHT])
 
 COMMAND = 'ground'
 MODE = GROUND
 # FOLLOW = True
-SEARCH = False      # if True, sweep when no zebras. if False, hover when no zebras
+SEARCH = True      # if True, sweep when no zebras. if False, hover when no zebras
 
 def euler_from_quaternion(x, y, z, w):
     t0 = 2. * (w * x + y * z)
