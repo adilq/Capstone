@@ -92,6 +92,8 @@ class ObjectDetectionNode(Node):
         
         output = BoundingBoxes()
         if len(corners) > 0:
+            
+            self.get_logger().info("zebras detected!")
             ids = ids.flatten()
             for (markerCorner, markerID) in zip(corners, ids):
                 if markerID != 0:
@@ -116,7 +118,6 @@ class ObjectDetectionNode(Node):
             # output.cls = result[0].boxes.cls.to(int).tolist()
             # output.conf = result[0].boxes.conf.tolist()
 
-            # self.get_logger().info("zebras detected!")
 
             # publish zebra pose whenever zebras are spotted in the new image
             # zebra_x, zebra_y = self.calc_centroid(boxes_xyxy)
