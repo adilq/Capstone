@@ -3,8 +3,20 @@ import cv2
 from ultralytics import YOLO
 import torch
 
-cv_image = cv2.imread('aerial_zebras.jpg')
-model = YOLO('best.pt')
+from argparse import ArgumentParser
+
+parser = ArgumentParser()
+parser.add_argument(
+    "image",
+    type=str,
+    help="input image file"
+)
+
+args = parser.parse_args()
+
+# cv_image = cv2.imread('aerial_zebras.jpg')
+cv_image = cv2.imread(args.image)
+model = YOLO('best_nano_augdata.pt')
 model.eval()
 result = model(cv_image)
 boxes_xyxy =  result[0].boxes.xyxy

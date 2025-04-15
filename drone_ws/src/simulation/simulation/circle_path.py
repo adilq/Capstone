@@ -8,8 +8,8 @@ import numpy as np
 import threading
 
 SCALE = 3
-n = 5000
-delta_time = 0.01
+n = 15000
+delta_time = 0.03 # 0.01
 
 total_time = 2 * n * delta_time + 5 
 

@@ -34,7 +34,7 @@ LANDING_INCREMENT = 0.3
 MAXIMUM_INCREMENT = 0.5
 
 OFFSET = 0.0
-GOAL_HEIGHT = 1.5 + OFFSET
+GOAL_HEIGHT = 2. # 1.5 + OFFSET
 
 COMMAND = 'ground'
 MODE = GROUND
@@ -155,8 +155,10 @@ class Controller(Node):
         self.odom_pose = None
 
         # observed points
-        self.point_sub = self.create_subscription(Point, 'zebra_pose/camera', callback = self.zebra_point_callback, qos_profile=10)
+        # self.point_sub = self.create_subscription(Point, 'zebra_pose/camera', callback = self.zebra_point_callback, qos_profile=10)
+        self.zebra_sub = self.create_subscription(PoseStamped, 'zebra_pose/image', callback = self.zebra_pose_callback, qos_profile=10)
         self.obs = np.zeros((2,1))
+        self.last_zebra_detection = self.get_clock().now().sec
 
         # controller
         # self.K = np.load('drone_ws/src/visual_servoing/visual_servoing/cameraK.npy')
@@ -181,6 +183,10 @@ class Controller(Node):
     # zebra point callback
     def zebra_point_callback(self, msg):
         self.obs = np.array([[msg.x],[msg.y]])
+
+    def zebra_pose_callback(self, msg):
+        self.obs = np.array([[msg.pose.position.x], [msg.pose.position.y]])
+        self.last_zebra_detection = msg.header.stamp.sec
 
     def get_virtual_image_coordinates(self, u, v, Z):
         '''
