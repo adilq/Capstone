@@ -25,6 +25,7 @@ setup(
             'img_sub_compressed = cv_basics.webcam_sub_compressed:main',
             'img_pub_compressed = cv_basics.webcam_pub_compressed:main',
             'pipeline_yolov8 = cv_basics.pipeline_yolov8:main'
+            'pipeline_aruco = cv_basics.pipeline_aruco:main'
         ],
     },
 )
