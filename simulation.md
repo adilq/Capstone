@@ -20,6 +20,8 @@
 2. run a world: `gazebo --verbose path/to/gazebo_world_file.world`
     * the `--verbose` flag prints out more details that may be useful for debugging
     * e.g., `gazebo --verbose PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic/worlds/grassland.world`
+  
+> if missing model files or Ogre resources etc. are a recurring problem, try copying the problematic models (folders under `PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic/models`) to `~/.gazebo/models`. Or just skip ahead to the [drone simulation](#run-the-drone-simulation) section
 
 ## open a gazebo world with ROS interaction
 
@@ -35,7 +37,33 @@
 
 # run the drone simulation
 
-1. source ROS installation and `drone_ws/devel/setup.bash`
+## first time PX4 simulation setup
+
+* make sure mavros is installed (from the [ROB498 repo](https://github.com/utiasSTARS/ROB498-flight/blob/main/instructions/hardware/jetson_nano.md)):
+  
+        sudo apt remove modemmanager
+        sudo adduser ${USER} dialout
+        
+        sudo apt install ros-foxy-mavros-extras
+        
+        cd /opt/ros/foxy/lib/mavros/
+        sudo ./install_geographiclib_datasets.sh 
+
+resources
+
+* [building PX4 software](https://docs.px4.io/main/en/dev_setup/building_px4.html)
+* [PX4 ROS2 user guide](https://docs.px4.io/main/en/ros2/user_guide.html)
+  > skip the _Setup Micro XRCE-DDS Agent & Client_ section
+
+run
+* run PX4 setup script: `bash ./PX4-Autopilot/Tools/setup/ubuntu.sh`
+  > If you want to install PX4 but keep your existing simulator installation, run ubuntu.sh above with the `--no-sim-tools` flag
+* make for the first time: `make px4_sitl` in `PX4-Autopilot`
+* install additional dependencies: `pip install --user -U empy==3.3.4 pyros-genmsg setuptools`
+
+## drone simulation
+
+1. source ROS installation and `drone_ws/install/setup.bash`
 
 2. select the world to use with `export PX4_SITL_WORLD=world_name`
     * e.g., `export PX4_SITL_WORLD=box_robot` (note no `.world` extension)
