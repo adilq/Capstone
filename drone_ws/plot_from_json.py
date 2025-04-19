@@ -5,7 +5,7 @@ import numpy as np
 
 
 
-filename = 'poses_run5'
+filename = 'poses_run6'
 
 with open(filename, "r+") as f:
     r = f.read()
@@ -48,6 +48,7 @@ b = np.array([[*box_x_interp], [*box_y_interp]])
 
 error = np.linalg.norm(l - b, axis=0)
 print(error)
+print(sum(error))
 
 plt.plot(local_t, error, label='error')
 plt.legend()
