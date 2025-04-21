@@ -15,6 +15,34 @@ local_x, local_y, local_t  = data['local']['x'], data['local']['y'], data['local
 setpoint_x, setpoint_y, setpoint_t  = data['setpoint']['x'], data['setpoint']['y'], data['setpoint']['t']
 box_x, box_y, box_t  = data['box']['x'], data['box']['y'], data['box']['t']
 
+# find when we hit the 10 minute mark (600s)
+box_t = np.array(box_t)
+b = box_t - box_t[0]
+b_clip = b[b <= 600]
+idx = len(b_clip)
+
+box_t = box_t[:idx] - box_t[0]
+box_x = box_x[:idx]
+box_y = box_y[:idx]
+
+local_t = np.array(local_t)
+b = local_t - local_t[0]
+b_clip = b[b <= 600]
+idx = len(b_clip)
+
+local_t = local_t[:idx]- local_t[0]
+local_x = local_x[:idx]
+local_y = local_y[:idx]
+
+setpoint_t = np.array(setpoint_t)
+b = setpoint_t - setpoint_t[0]
+b_clip = b[b <= 600]
+idx = len(b_clip)
+
+setpoint_t = setpoint_t[:idx]
+setpoint_x = setpoint_x[:idx]
+setpoint_y = setpoint_y[:idx]
+
 ax = plt.figure(0).add_subplot(projection='3d')
 # axv = plt.figure().add_subplot(projection='3d')
 ax.plot(local_x, local_y, [t - local_t[0] for t in local_t], zdir='z', label='local_pose', c='b')
