@@ -142,7 +142,7 @@ if __name__ == '__main__':
     zebra = {'x': zebra_x, 'y': zebra_y, 'z': zebra_z, 't': zebra_t}
     box = {'x': box_x, 'y': box_y, 'z': box_z, 't': box_t}
     
-    with open('poses_run6', 'w+') as f:
+    with open('poses_eval9', 'w+') as f:
         json_ = json.dumps({'local': local, 'setpoint': setpoint, 'zebra': zebra, 'box': box})
         print(json_, file=f)
         
